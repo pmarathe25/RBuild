@@ -1,4 +1,8 @@
 use std::env;
+use std::collections::HashMap;
+use std::vec::Vec;
+use std::cell::Cell;
+use std::string::String;
 
 fn help(executable: &str) {
     println!("Usage: {} RBUILD_FILE [TARGETS...]
@@ -7,27 +11,36 @@ fn help(executable: &str) {
     std::process::exit(1);
 }
 
-#[derive(Debug)]
 struct PathNode<'a> {
     path: &'a str,
-    inputs: std::vec::Vec<&'a PathNode<'a>>,
-    cmds: std::vec::Vec<&'a str>,
+    inputs: Cell<Vec<&'a PathNode<'a>>>,
+    cmds: Vec<&'a str>,
+}
+
+impl<'a> std::fmt::Debug for PathNode<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut inp_string = String::new();
+        unsafe {
+            for inp in &*(self.inputs.as_ptr()) {
+                inp_string = inp_string + inp.path + ", ";
+            }
+        }
+        write!(f, "(Node: {}\n\tInputs: {}\n\tRun: {:?})", self.path, inp_string, self.cmds)
+    }
 }
 
 impl<'a> PathNode<'a> {
     fn init(path: &'a str) -> PathNode<'a> {
-        return PathNode{path: path, inputs: vec!(), cmds: vec!()};
+        return PathNode{path: path, inputs: Cell::new(vec!()), cmds: vec!()};
     }
 }
 
-
 fn parse_config_file(config_file: &str) {
-    let mut graph = std::collections::HashMap::new();
+    let mut graph = HashMap::new();
     let mut active_node: &str = "";
+    let mut path_deps: HashMap<&str, Vec<&str>> = HashMap::new();
 
     for (lineno, line) in config_file.lines().enumerate() {
-        // TODO: Generate nodes w/ cmds but not inputs. Place inputs in string map, then update the nodes with references to their inputs.
-
         // Each line MUST begin with a keyword describing what that line represent, so we can safely split the string by whitespace here.
         // This is actually quite efficient, as iterators are lazily evaluated.
         match line.split_whitespace().nth(0) {
@@ -43,17 +56,25 @@ fn parse_config_file(config_file: &str) {
                 match keyword {
                     "path" => {
                         active_node = value;
-                        // DEBUG:
-                        println!("Active node is: {}", active_node);
-                        if !graph.contains_key(active_node) {
-                            graph.insert(active_node, PathNode::init(active_node));
-                        }
+                        match graph.insert(active_node, PathNode::init(active_node)) {
+                            None => (),
+                            _ => panic!("Error: On line {}: path {} specified more than once", lineno, value),
+                        };
+                        path_deps.insert(active_node, vec!());
                     },
                     "dep" => {
-                        // graph.get_mut(active_node).unwrap();
+                        // Push this dependency to the path_deps map.
+                        match path_deps.get_mut(active_node) {
+                            Some(val) => val,
+                            None => panic!("Error: On line {}: dep specified before path", lineno),
+                        }.push(value);
                     },
                     "run" => {
-                        graph.get_mut(active_node).unwrap().cmds.push(&line[keyword.len()..]);
+                        // We can add commands directly to the node.
+                        match graph.get_mut(active_node) {
+                            Some(val) => val,
+                            None => panic!("Error: On line {}: run specified before path", lineno),
+                        }.cmds.push(&line[keyword.len()..]);
                     },
                     _ => panic!("Error: On line {}: Unrecognized keyword: '{}'", lineno, keyword)
                 }
@@ -62,8 +83,21 @@ fn parse_config_file(config_file: &str) {
         };
     }
 
+    // Walk over the path dependencies and update the graph.
+    for (path, deps) in &path_deps {
+        // TODO: Handle error case here
+        let active_node = graph.get(path).unwrap();
+        for dep in deps {
+            let dep_node = graph.get(dep).unwrap();
+            unsafe {
+                (*active_node.inputs.as_ptr()).push(dep_node);
+            }
+        }
+    }
+
     // DEBUG:
-    println!("Graph contains: {:?}", graph);
+    println!("Graph contains: {:?}\n", graph);
+    println!("Path dependency map contains: {:?}\n", path_deps)
 }
 
 fn main() {
