@@ -26,7 +26,7 @@ fn main() {
 
     let graph = Graph::from_config(&config);
     // DEBUG:
-    println!("Graph contains: {:?}\n", graph);
+    println!("Graph contains:\n{}", graph);
 
     // First argument is the executable name and the second is the rbuild file.
     println!("{} using config file {}", args[0], args[1]);

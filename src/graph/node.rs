@@ -1,20 +1,24 @@
 use std::vec::Vec;
+use std::time::SystemTime;
+use std::fs;
 
 #[derive(Debug)]
-pub(crate) struct PathNode<'a> {
-    path: &'a str,
-    pub(crate) inputs: Vec<&'a str>,
-    pub(crate) cmds: Vec<&'a str>,
+pub struct Node<'a> {
+    pub path: &'a str,
+    pub inputs: Vec<usize>,
+    pub cmds: Vec<&'a str>,
+    pub timestamp: SystemTime,
 }
 
-impl<'a> std::fmt::Display for PathNode<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "(Node: {}\n\tInputs: {:?}\n\tRun: {:?})", self.path, self.inputs, self.cmds)
-    }
-}
-
-impl<'a> PathNode<'a> {
-    pub(crate) fn init(path: &'a str) -> PathNode<'a> {
-        return PathNode{path: path, inputs: vec!(), cmds: vec!()};
+impl<'a> Node<'a> {
+    pub(crate) fn init(path: &'a str) -> Node<'a> {
+        let timestamp = match fs::metadata(path) {
+            Ok(meta) => match meta.modified() {
+                Ok(timestamp) => timestamp,
+                Err(_) => panic!("Could not access timestamp for {}", path)
+            },
+            Err(_) => SystemTime::UNIX_EPOCH,
+        };
+        return Node{path: path, inputs: Vec::new(), cmds: Vec::new(), timestamp: timestamp};
     }
 }
