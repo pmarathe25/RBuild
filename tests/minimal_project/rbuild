@@ -1,3 +1,9 @@
+path lib
+dep /home/pranav/Rust/rbuild/tests/minimal_project/build/libmath.so
+
+path test
+dep /home/pranav/Rust/rbuild/tests/minimal_project/build/test
+
 path /home/pranav/Rust/rbuild/tests/minimal_project/build/test
 dep /home/pranav/Rust/rbuild/tests/minimal_project/build/libmath.so
 dep /home/pranav/Rust/rbuild/tests/minimal_project/build/test.o
