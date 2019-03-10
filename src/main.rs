@@ -34,18 +34,5 @@ fn main() {
             None => panic!("{} is not a valid target", target_path),
         });
 
-    // DEBUG:
-    // let subgraph = graph.get_subgraph(target_indices);
-    // for layer in &subgraph {
-    //     println!("{:?}", layer.iter().map(
-    //         |x| match graph.nodes.get(*x) {
-    //             Some(node) => node,
-    //             None => panic!("Could not find node at {}", x)
-    //         }.path).collect::<Vec<&str>>());
-    // }
-
-    println!("Subgraph for lib and test: {:?}", graph.get_subgraph(vec!(0 as usize, 2 as usize).into_iter()));
-    println!("Subgraph for lib and test: {:?}", graph.get_all_deps(vec!(0 as usize, 2 as usize).into_iter()));
-    // println!("Subgraph for lib: {:?}", graph.get_subgraph(vec!(0 as usize).into_iter()));
-    // println!("Subgraph for test: {:?}", graph.get_subgraph(vec!(2 as usize).into_iter()));
+    println!("Subgraph for lib and test: {:?}", graph.get_deps(target_indices));
 }

@@ -69,61 +69,27 @@ impl<'a> Graph<'a> {
         return graph;
     }
 
-    // TODO: Construct subgraphs for each individual target specified, then combine them bottom up.
-    // Gets a subgraph with the specified output indices.
-    // A subgraph is defined by a stack of layers, where each
-    // layer contains one or more node indices.
-    // # Arguments
-    //
-    // * `output_indices` - An iterable over indices of type usize
-    pub fn get_subgraph<T>(&self, output_indices: T) -> Vec<HashSet<usize>>
-        where T: Iterator<Item=usize> {
-        // Given a layer, i.e. a HashSet of indices, gets a new HashSet containing all its inputs
-        fn get_layer_inputs(graph: &Graph, layer: &HashSet<usize>) -> HashSet<usize> {
-            let mut next_layer = HashSet::new();
-            for index in layer {
-                let inputs = &match graph.nodes.get(*index) {
-                    Some(node) => node,
-                    None => panic!("Could not find node at index {}", index)
-                }.inputs;
-                for inp in inputs {
-                    next_layer.insert(*inp);
-                }
-            }
-            return next_layer;
-        }
-
-        let mut subgraph: Vec<HashSet<usize>> = Vec::new();
-        // Walk over each layer of the subgraph, and its inputs to the layer stack.
-        // This loop continues until we reach a layer that's empty.
-        let mut layer: HashSet<usize> = output_indices.collect();
-        while layer.len() > 0 {
-            subgraph.push(layer);
-            layer = get_layer_inputs(self, match subgraph.last() {
-                Some(elem) => elem,
-                None => panic!("Could not retrieve last layer of subgraph.")
-            });
-        }
-        // TODO: Optimize graph by shifting nodes into lower layers when they have no dependecies there.
-
-        return subgraph;
-    }
-
-    /// Given a set of node indices, gets all dependencies of those nodes, including nested dependencies.
-    pub fn get_all_deps<T>(&self, output_indices: T) -> HashSet<usize>
-        where T: Iterator<Item=usize>+Clone {
-
-        let mut all_deps = HashSet::new();
-        for out in output_indices.clone() {
-            let inputs = match self.nodes.get(out) {
+    /// Given a set of node indices, gets all dependencies of those nodes,
+    /// including nested dependencies.
+    pub fn get_deps<T>(&self, output_indices: T) -> HashSet<usize>
+        where T: Iterator<Item=usize> + Clone {
+        // Gets all the dependencies for a single output node and adds them to the deps HashSet.
+        fn get_single_dep(graph: &Graph, node_index: usize, deps: &mut HashSet<usize>) {
+            let inputs = &match graph.nodes.get(node_index) {
                 Some(node) => node,
-                None => panic!(),
-            }.inputs.iter().cloned();
-            let mut deps = self.get_all_deps(inputs);
-
-            all_deps = all_deps.union(&deps).cloned().collect();
+                None => panic!("Could not find node at index {}", node_index),
+            }.inputs;
+            for input in inputs {
+                deps.insert(*input);
+                get_single_dep(graph, *input, deps);
+            }
         }
-        return all_deps.union(&output_indices.collect()).cloned().collect();
+
+        let mut all_deps: HashSet<usize> = output_indices.clone().collect();
+        for out in output_indices {
+            get_single_dep(&self, out, &mut all_deps)
+        }
+        return all_deps;
     }
 
     // Given a path, gets the index of the corresponding node.
