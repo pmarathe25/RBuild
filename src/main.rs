@@ -1,9 +1,13 @@
 use std::env;
 use std::vec::Vec;
 use std::string::String;
+use std::collections::HashSet;
 
 mod graph;
 use crate::graph::Graph;
+
+mod threadpool;
+use crate::threadpool::{ThreadPool, WorkerStatus};
 
 fn help(executable: &str) {
     println!("Usage: {} RBUILD_FILE [TARGETS...]
@@ -34,5 +38,26 @@ fn main() {
             None => panic!("{} is not a valid target", target_path),
         });
 
-    println!("Subgraph for lib and test: {:?}", graph.get_deps(target_indices));
+
+    // DEBUG:
+    // let (deps, depless) = graph.get_deps(target_indices);
+    // println!("Dependencies for {:?}: {:?}\nNodes with no dependencies: {:?}", args.iter().skip(2).collect::<HashSet<_>>(), deps.iter().map(|x| graph.nodes.get(*x).unwrap().path).collect::<HashSet<_>>(), depless.iter().map(|x| graph.nodes.get(*x).unwrap().path).collect::<HashSet<_>>());
+
+    // Threadpool stuff
+    let pool = ThreadPool::new(8);
+
+    let num_jobs = 8;
+    for i in 0..num_jobs {
+        pool.execute(move || std::thread::sleep(std::time::Duration::new(i, 0)));
+    }
+
+    let mut jobs_left = num_jobs;
+    while jobs_left > 0 {
+        match pool.wstatus_receiver.recv().unwrap() {
+            WorkerStatus::Complete(id) => println!("{} finished!", id),
+        };
+        jobs_left -= 1;
+    }
+
+    // std::thread::sleep(std::time::Duration::new(3, 0));
 }

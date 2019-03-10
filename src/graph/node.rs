@@ -1,12 +1,10 @@
 use std::vec::Vec;
-use std::collections::HashSet;
 use std::time::SystemTime;
 use std::fs;
 
 #[derive(Debug)]
 pub struct Node<'a> {
     pub path: &'a str,
-    pub inputs: HashSet<usize>,
     pub cmds: Vec<&'a str>,
     pub timestamp: SystemTime,
 }
@@ -20,6 +18,6 @@ impl<'a> Node<'a> {
             },
             Err(_) => SystemTime::UNIX_EPOCH,
         };
-        return Node{path: path, inputs: HashSet::new(), cmds: Vec::new(), timestamp: timestamp};
+        return Node{path: path, cmds: Vec::new(), timestamp: timestamp};
     }
 }

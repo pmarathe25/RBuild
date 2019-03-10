@@ -5,8 +5,11 @@ use std::vec::Vec;
 mod node;
 use crate::graph::node::Node;
 
+#[derive(Debug)]
 pub struct Graph<'a> {
     pub nodes: Vec<Node<'a>>,
+    node_inputs: Vec<HashSet<usize>>,
+    node_outputs: Vec<HashSet<usize>>,
     node_indices: HashMap<&'a str, usize>,
 }
 
@@ -19,13 +22,15 @@ impl<'a> Graph<'a> {
                 None => {
                     let index = graph.nodes.len();
                     graph.nodes.push(Node::init(path));
+                    graph.node_inputs.push(HashSet::new());
+                    graph.node_outputs.push(HashSet::new());
                     graph.node_indices.insert(path, index);
                     return index;
                 }
             };
         }
 
-        let mut graph = Graph{nodes: Vec::new(), node_indices: HashMap::new()};
+        let mut graph = Graph{nodes: Vec::new(), node_inputs: Vec::new(), node_outputs: Vec::new(), node_indices: HashMap::new()};
         let mut cur_node_id: usize = 0;
 
         for (lineno, line) in config.lines().enumerate() {
@@ -46,12 +51,16 @@ impl<'a> Graph<'a> {
                             cur_node_id = get_or_insert(&mut graph, value);
                         },
                         "dep" => {
-                            // Add this dependency to cur_node_id
+                            // Add node inputs and outputs.
                             let dep_node_id = get_or_insert(&mut graph, value);
-                            match graph.nodes.get_mut(cur_node_id) {
+                            match graph.node_inputs.get_mut(cur_node_id) {
                                 Some(val) => val,
                                 None => panic!("Error: Line {}: dep specified before path", lineno),
-                            }.inputs.insert(dep_node_id);
+                            }.insert(dep_node_id);
+                            match graph.node_outputs.get_mut(dep_node_id) {
+                                Some(val) => val,
+                                None => panic!("Error: Line {}: dep specified before path", lineno),
+                            }.insert(cur_node_id);
                         },
                         // Add commands
                         "run" => {
@@ -71,28 +80,33 @@ impl<'a> Graph<'a> {
 
     /// Given a set of node indices, gets all dependencies of those nodes,
     /// including nested dependencies.
-    pub fn get_deps<T>(&self, output_indices: T) -> HashSet<usize>
+    pub fn get_deps<T>(&self, output_indices: T) -> (HashSet<usize>, HashSet<usize>)
         where T: Iterator<Item=usize> + Clone {
         // Gets all the dependencies for a single output node and adds them to the deps HashSet.
-        fn get_single_dep(graph: &Graph, node_index: usize, deps: &mut HashSet<usize>) {
-            let inputs = &match graph.nodes.get(node_index) {
+        // Also tracks which nodes have no dependencies.
+        fn get_single_dep(graph: &Graph, node_index: usize, deps: &mut HashSet<usize>, depless: &mut HashSet<usize>) {
+            let inputs = match graph.node_inputs.get(node_index) {
                 Some(node) => node,
                 None => panic!("Could not find node at index {}", node_index),
-            }.inputs;
+            };
             for input in inputs {
                 deps.insert(*input);
-                get_single_dep(graph, *input, deps);
+                get_single_dep(graph, *input, deps, depless);
+            }
+            if inputs.len() == 0 {
+                depless.insert(node_index);
             }
         }
 
         let mut all_deps: HashSet<usize> = output_indices.clone().collect();
+        let mut depless = HashSet::new();
         for out in output_indices {
-            get_single_dep(&self, out, &mut all_deps)
+            get_single_dep(&self, out, &mut all_deps, &mut depless);
         }
-        return all_deps;
+        return (all_deps, depless);
     }
 
-    // Given a path, gets the index of the corresponding node.
+    /// Given a path, gets the index of the corresponding node.
     pub fn get_index(&self, path: &'a str) -> Option<&usize> {
         return self.node_indices.get(path);
     }
@@ -100,9 +114,9 @@ impl<'a> Graph<'a> {
 
 impl<'a> Display for Graph<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        for node in &self.nodes {
+        for (index, node) in self.nodes.iter().enumerate() {
             f.write_fmt(format_args!("{}\n\tInputs:", node.path))?;
-            for input in &node.inputs {
+            for input in self.node_inputs.get(index).unwrap() {
                 f.write_fmt(format_args!("\n\t\t{}",
                     match self.nodes.get(*input){
                         Some(node) => node,
