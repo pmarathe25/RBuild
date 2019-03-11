@@ -61,14 +61,18 @@ fn main() {
     //     };
     //     jobs_left -= 1;
     // }
-    let n = Arc::new(Mutex::new(ExecNode::new()));
-    println!("{:?}", n);
+    // let n = Arc::new(Mutex::new(ExecNode::new()));
+    let mut nodes = vec!(Some(ExecNode::new()));
+    println!("{:?}", nodes);
      {
          let pool = ThreadPool::new(8);
 
-         pool.execute(&n, 0);
+         pool.execute(nodes.first_mut().unwrap().take().unwrap(), 0);
 
-
+         let node = match pool.wstatus_receiver.recv().unwrap() {
+             WorkerStatus::Complete(id, job) => job,
+         };
+         nodes.first_mut().unwrap().replace(node);
          // for node in graph.nodes.iter() {
          //     let cloned_cmds = Arc::clone(&node.cmds);
          //     pool.execute(move || {
@@ -82,7 +86,7 @@ fn main() {
          // }
      }
 
-     println!("{:?}", n);
+     println!("{:?}", nodes);
 
     // for i in 0..8 {
     //     pool.execute(move || {Command::new("echo").arg("Hi!").spawn().unwrap();}, i)
