@@ -13,7 +13,7 @@ impl<F: FnOnce()> FnBox for F {
 }
 
 enum Message {
-    Job(Box<FnBox + Send + 'static>, usize),
+    Job(Arc<Mutex<ExecNode>>, usize),
     Terminate,
 }
 
@@ -34,7 +34,7 @@ impl Worker {
                 match message {
                     Message::Job(job, job_id) => {
                         // println!("Worker {} received job {}; executing", id, job_id);
-                        job.call();
+                        job.lock().unwrap().execute();
                         match sender.send(WorkerStatus::Complete(id, job_id)) {
                             Ok(_) => (),
                             Err(what) => panic!("Worker {} could not send job {} status.\n{}", id, job_id, what),
@@ -60,6 +60,19 @@ pub struct ThreadPool {
     pub wstatus_receiver: mpsc::Receiver<WorkerStatus>,
 }
 
+#[derive(Debug)]
+pub struct ExecNode {x: usize}
+
+impl ExecNode {
+    pub fn new() -> ExecNode {
+        return ExecNode{x: 1};
+    }
+
+    fn execute(&mut self) {
+        self.x = 0;
+    }
+}
+
 impl ThreadPool {
     pub fn new(size: usize) -> ThreadPool {
         assert!(size > 0);
@@ -76,10 +89,8 @@ impl ThreadPool {
         return ThreadPool{workers: workers, job_sender: job_sender, wstatus_receiver: wstatus_receiver};
     }
 
-    pub fn execute<F>(&self, func: F, job_id: usize)
-        where F: FnOnce() + Send + 'static {
-        let job = Box::new(func);
-        self.job_sender.send(Message::Job(job, job_id)).unwrap();
+    pub fn execute(&self, node: &Arc<Mutex<ExecNode>>, job_id: usize) {
+        self.job_sender.send(Message::Job(Arc::clone(&node), job_id)).unwrap();
     }
 }
 

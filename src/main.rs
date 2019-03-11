@@ -4,13 +4,13 @@ use std::io::Write;
 use std::process::Command;
 use std::string::String;
 use std::collections::HashSet;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 mod graph;
 use crate::graph::Graph;
 
 mod threadpool;
-use crate::threadpool::{ThreadPool, WorkerStatus};
+use crate::threadpool::{ThreadPool, WorkerStatus, ExecNode};
 
 fn help(executable: &str) {
     println!("Usage: {} RBUILD_FILE [TARGETS...]
@@ -31,20 +31,20 @@ fn main() {
         Ok(file) => file,
     };
 
-    let mut graph = Graph::from_config(&config);
-    // DEBUG:
-    println!("Graph:\n{}", graph);
-
-    // First argument is the executable name and the second is the rbuild file.
-    // The remaining arguments are targets.
-    let target_indices = args.iter().skip(2).map(
-        |target_path| match graph.get_index(&target_path) {
-            Some(index) => *index,
-            None => panic!("{} is not a valid target", target_path),
-        });
-
-    let (deps, depless) = graph.get_deps(target_indices);
-    println!("Dependencies for {:?}: {:?}\nNodes with no dependencies: {:?}", args.iter().skip(2).collect::<HashSet<_>>(), deps.iter().map(|x| graph.nodes.get(*x).unwrap().path).collect::<HashSet<_>>(), depless.iter().map(|x| graph.nodes.get(*x).unwrap().path).collect::<HashSet<_>>());
+    // let mut graph = Graph::from_config(&config);
+    // // DEBUG:
+    // println!("Graph:\n{}", graph);
+    //
+    // // First argument is the executable name and the second is the rbuild file.
+    // // The remaining arguments are targets.
+    // let target_indices = args.iter().skip(2).map(
+    //     |target_path| match graph.get_index(&target_path) {
+    //         Some(index) => *index,
+    //         None => panic!("{} is not a valid target", target_path),
+    //     });
+    //
+    // let (deps, depless) = graph.get_deps(target_indices);
+    // println!("Dependencies for {:?}: {:?}\nNodes with no dependencies: {:?}", args.iter().skip(2).collect::<HashSet<_>>(), deps.iter().map(|x| graph.nodes.get(*x).unwrap().path).collect::<HashSet<_>>(), depless.iter().map(|x| graph.nodes.get(*x).unwrap().path).collect::<HashSet<_>>());
 
     // Threadpool stuff
 
@@ -61,20 +61,28 @@ fn main() {
     //     };
     //     jobs_left -= 1;
     // }
+    let n = Arc::new(Mutex::new(ExecNode::new()));
+    println!("{:?}", n);
      {
          let pool = ThreadPool::new(8);
-         for node in graph.nodes.iter() {
-             let cloned_cmds = Arc::clone(&node.cmds);
-             pool.execute(move || {
-                for cmd in cloned_cmds.lock().unwrap().iter_mut() {
-                    cmd.spawn();
-                }
-             }, 0);
+
+         pool.execute(&n, 0);
+
+
+         // for node in graph.nodes.iter() {
+         //     let cloned_cmds = Arc::clone(&node.cmds);
+         //     pool.execute(move || {
+         //        for cmd in cloned_cmds.lock().unwrap().iter_mut() {
+         //            cmd.spawn();
+         //        }
+         //     }, 0);
              // for cmd in node.cmds.iter() {
              //     pool.execute(move || {cmd_cloned.execute();}, 0)
              // }
-         }
+         // }
      }
+
+     println!("{:?}", n);
 
     // for i in 0..8 {
     //     pool.execute(move || {Command::new("echo").arg("Hi!").spawn().unwrap();}, i)
