@@ -63,11 +63,10 @@ fn main() {
     // }
      {
          let pool = ThreadPool::new(8);
-         for node in &graph.nodes {
+         for mut node in graph.nodes.iter().cloned() {
              for cmd in node.cmds.iter().cloned() {
                  pool.execute(move || {Command::new(&cmd.executable).args(&cmd.args).spawn();}, 0)
              }
-             // pool.execute(move || {node.execute();}, 0);
          }
      }
 

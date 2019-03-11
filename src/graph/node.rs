@@ -16,7 +16,7 @@ impl NodeCommand {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Node<'a> {
     pub path: &'a str,
     pub cmds: Vec<NodeCommand>,
@@ -41,7 +41,7 @@ impl<'a> Node<'a> {
     }
 
     pub(crate) fn execute(&mut self) {
-        for cmd in &mut self.cmds {
+        for cmd in &self.cmds {
             Command::new(&cmd.executable).args(&cmd.args).spawn();
         }
         self.update_timestamp();
