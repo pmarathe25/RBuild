@@ -16,10 +16,10 @@ impl NodeCommand {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(crate) struct Node<'a> {
     pub path: &'a str,
-    pub cmds: Vec<NodeCommand>,
+    pub cmds: Vec<Option<Command>>,
     pub timestamp: SystemTime,
 }
 
@@ -40,10 +40,10 @@ impl<'a> Node<'a> {
         };
     }
 
-    pub(crate) fn execute(&mut self) {
-        for cmd in &self.cmds {
-            Command::new(&cmd.executable).args(&cmd.args).spawn();
-        }
-        self.update_timestamp();
-    }
+    // pub(crate) fn execute(&mut self) {
+    //     for cmd in &self.cmds {
+    //         Command::new(&cmd.executable).args(&cmd.args).spawn();
+    //     }
+    //     self.update_timestamp();
+    // }
 }

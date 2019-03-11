@@ -31,7 +31,7 @@ fn main() {
         Ok(file) => file,
     };
 
-    let graph = Graph::from_config(&config);
+    let mut graph = Graph::from_config(&config);
     // DEBUG:
     println!("Graph:\n{}", graph);
 
@@ -63,9 +63,10 @@ fn main() {
     // }
      {
          let pool = ThreadPool::new(8);
-         for mut node in graph.nodes.iter().cloned() {
-             for cmd in node.cmds.iter().cloned() {
-                 pool.execute(move || {Command::new(&cmd.executable).args(&cmd.args).spawn();}, 0)
+         for node in graph.nodes.iter_mut() {
+             for cmd in node.cmds.iter_mut() {
+                 let cmd_moved = cmd.take();
+                 pool.execute(move || {cmd_moved.unwrap().spawn();}, 0)
              }
          }
      }

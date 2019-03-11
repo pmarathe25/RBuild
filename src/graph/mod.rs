@@ -69,7 +69,7 @@ impl<'a> Graph<'a> {
                             match graph.nodes.get_mut(cur_node_id) {
                                 Some(val) => val,
                                 None => panic!("Error: Line {}: run specified before path", lineno),
-                            }.cmds.push(NodeCommand::new(value));
+                            }.cmds.push(Some(Command::new(value)));
                         },
                         // And arguments
                         "arg" => {
@@ -77,10 +77,15 @@ impl<'a> Graph<'a> {
                                 Some(val) => val,
                                 None => panic!("Error: Line {}: arg specified before path", lineno),
                             }.cmds;
-                            match cmds.last_mut() {
+                            let cmd = match cmds.last_mut() {
                                 Some(cmd) => cmd,
                                 None => panic!("Error: Line {}: arg specified before run", lineno),
-                            }.args.push(value.to_string());
+                            };
+                            match cmd {
+                                Some(c) => c,
+                                None => panic!(),
+                            }.arg(value);
+                            // .unwrap().arg(value);
                         },
                         _ => panic!("Error: Line {}: Unrecognized keyword: '{}'", lineno, keyword)
                     }
