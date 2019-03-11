@@ -1,7 +1,10 @@
 use std::env;
 use std::vec::Vec;
+use std::io::Write;
+use std::process::Command;
 use std::string::String;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 mod graph;
 use crate::graph::Graph;
@@ -29,6 +32,8 @@ fn main() {
     };
 
     let graph = Graph::from_config(&config);
+    // DEBUG:
+    println!("Graph:\n{}", graph);
 
     // First argument is the executable name and the second is the rbuild file.
     // The remaining arguments are targets.
@@ -42,19 +47,31 @@ fn main() {
     println!("Dependencies for {:?}: {:?}\nNodes with no dependencies: {:?}", args.iter().skip(2).collect::<HashSet<_>>(), deps.iter().map(|x| graph.nodes.get(*x).unwrap().path).collect::<HashSet<_>>(), depless.iter().map(|x| graph.nodes.get(*x).unwrap().path).collect::<HashSet<_>>());
 
     // Threadpool stuff
-    let pool = ThreadPool::new(8);
 
-    let num_jobs = 12;
-    for i in 0..num_jobs {
-        pool.execute(move || std::thread::sleep(std::time::Duration::new(i as u64, 0)), i);
-    }
+    // let num_jobs = 12;
+    // for i in 0..num_jobs {
+    //     pool.execute(move || std::thread::sleep(std::time::Duration::new(i as u64, 0)), i);
+    // }
 
-    println!("All jobs queued!");
-    let mut jobs_left = num_jobs;
-    while jobs_left > 0 {
-        match pool.wstatus_receiver.recv().unwrap() {
-            WorkerStatus::Complete(id, job_id) => println!("{} finished {}!", id, job_id),
-        };
-        jobs_left -= 1;
-    }
+    // println!("All jobs queued!");
+    // let mut jobs_left = num_jobs;
+    // while jobs_left > 0 {
+    //     match pool.wstatus_receiver.recv().unwrap() {
+    //         WorkerStatus::Complete(id, job_id) => println!("{} finished {}!", id, job_id),
+    //     };
+    //     jobs_left -= 1;
+    // }
+     {
+         let pool = ThreadPool::new(8);
+         for node in &graph.nodes {
+             for cmd in node.cmds.iter().cloned() {
+                 pool.execute(move || {Command::new(&cmd.executable).args(&cmd.args).spawn();}, 0)
+             }
+             // pool.execute(move || {node.execute();}, 0);
+         }
+     }
+
+    // for i in 0..8 {
+    //     pool.execute(move || {Command::new("echo").arg("Hi!").spawn().unwrap();}, i)
+    // }
 }

@@ -1,13 +1,15 @@
-use std::fmt::Display;
-use std::collections::{HashMap, HashSet};
 use std::vec::Vec;
+use std::fmt::Display;
+use std::process::Command;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 mod node;
-use crate::graph::node::Node;
+use crate::graph::node::{Node, NodeCommand};
 
 #[derive(Debug)]
 pub struct Graph<'a> {
-    pub nodes: Vec<Node<'a>>,
+    pub(crate) nodes: Vec<Node<'a>>,
     node_inputs: Vec<HashSet<usize>>,
     node_outputs: Vec<HashSet<usize>>,
     node_indices: HashMap<&'a str, usize>,
@@ -54,11 +56,11 @@ impl<'a> Graph<'a> {
                             // Add node inputs and outputs.
                             let dep_node_id = get_or_insert(&mut graph, value);
                             match graph.node_inputs.get_mut(cur_node_id) {
-                                Some(val) => val,
+                                Some(inp) => inp,
                                 None => panic!("Error: Line {}: dep specified before path", lineno),
                             }.insert(dep_node_id);
                             match graph.node_outputs.get_mut(dep_node_id) {
-                                Some(val) => val,
+                                Some(out) => out,
                                 None => panic!("Error: Line {}: dep specified before path", lineno),
                             }.insert(cur_node_id);
                         },
@@ -67,7 +69,18 @@ impl<'a> Graph<'a> {
                             match graph.nodes.get_mut(cur_node_id) {
                                 Some(val) => val,
                                 None => panic!("Error: Line {}: run specified before path", lineno),
-                            }.cmds.push(&line[keyword.len()..]);
+                            }.cmds.push(NodeCommand::new(value));
+                        },
+                        // And arguments
+                        "arg" => {
+                            let cmds = &mut match graph.nodes.get_mut(cur_node_id) {
+                                Some(val) => val,
+                                None => panic!("Error: Line {}: arg specified before path", lineno),
+                            }.cmds;
+                            match cmds.last_mut() {
+                                Some(cmd) => cmd,
+                                None => panic!("Error: Line {}: arg specified before run", lineno),
+                            }.args.push(value.to_string());
                         },
                         _ => panic!("Error: Line {}: Unrecognized keyword: '{}'", lineno, keyword)
                     }
@@ -124,8 +137,8 @@ impl<'a> Display for Graph<'a> {
                     }.path))?;
             }
             f.write_str("\n\tCommands:")?;
-            for cmd in &node.cmds {
-                f.write_fmt(format_args!("\n\t\t{}", cmd))?;
+            for cmd in node.cmds.iter() {
+                f.write_fmt(format_args!("\n\t\t{:?}", cmd))?;
             }
             f.write_str("\n")?;
         }
