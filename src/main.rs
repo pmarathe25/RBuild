@@ -63,11 +63,16 @@ fn main() {
     // }
      {
          let pool = ThreadPool::new(8);
-         for node in graph.nodes.iter_mut() {
-             for cmd in node.cmds.iter_mut() {
-                 let cmd_moved = cmd.take();
-                 pool.execute(move || {cmd_moved.unwrap().spawn();}, 0)
-             }
+         for node in graph.nodes.iter() {
+             let cloned_cmds = Arc::clone(&node.cmds);
+             pool.execute(move || {
+                for cmd in cloned_cmds.iter() {
+                    cmd.execute();
+                }
+             }, 0);
+             // for cmd in node.cmds.iter() {
+             //     pool.execute(move || {cmd_cloned.execute();}, 0)
+             // }
          }
      }
 

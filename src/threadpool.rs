@@ -33,16 +33,16 @@ impl Worker {
                 let message = job_receiver.lock().unwrap().recv().unwrap();
                 match message {
                     Message::Job(job, job_id) => {
-                        println!("Worker {} received job {}; executing", id, job_id);
+                        // println!("Worker {} received job {}; executing", id, job_id);
                         job.call();
                         match sender.send(WorkerStatus::Complete(id, job_id)) {
                             Ok(_) => (),
                             Err(what) => panic!("Worker {} could not send job {} status.\n{}", id, job_id, what),
                         };
-                        println!("Worker {} finished executing job {}", id, job_id);
+                        // println!("Worker {} finished executing job {}", id, job_id);
                     },
                     Message::Terminate => {
-                        println!("Worker {} shutting down", id);
+                        // println!("Worker {} shutting down", id);
                         break;
                     }
                 }

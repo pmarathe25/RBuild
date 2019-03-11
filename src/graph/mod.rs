@@ -1,11 +1,11 @@
 use std::vec::Vec;
 use std::fmt::Display;
-use std::process::Command;
 use std::collections::{HashMap, HashSet};
+
 use std::sync::Arc;
 
 mod node;
-use crate::graph::node::{Node, NodeCommand};
+use crate::graph::node::{Node, Command};
 
 #[derive(Debug)]
 pub struct Graph<'a> {
@@ -66,25 +66,22 @@ impl<'a> Graph<'a> {
                         },
                         // Add commands
                         "run" => {
-                            match graph.nodes.get_mut(cur_node_id) {
+                            let mut cmds = &mut match graph.nodes.get_mut(cur_node_id) {
                                 Some(val) => val,
                                 None => panic!("Error: Line {}: run specified before path", lineno),
-                            }.cmds.push(Some(Command::new(value)));
+                            }.cmds;
+                            Arc::get_mut(&mut cmds).unwrap().push(Command::new(value));
                         },
                         // And arguments
                         "arg" => {
-                            let cmds = &mut match graph.nodes.get_mut(cur_node_id) {
+                            let mut cmds = &mut match graph.nodes.get_mut(cur_node_id) {
                                 Some(val) => val,
                                 None => panic!("Error: Line {}: arg specified before path", lineno),
                             }.cmds;
-                            let cmd = match cmds.last_mut() {
+                            let cmd = match Arc::get_mut(&mut cmds).unwrap().last_mut() {
                                 Some(cmd) => cmd,
                                 None => panic!("Error: Line {}: arg specified before run", lineno),
-                            };
-                            match cmd {
-                                Some(c) => c,
-                                None => panic!(),
-                            }.arg(value);
+                            }.args.push(value.to_string());
                             // .unwrap().arg(value);
                         },
                         _ => panic!("Error: Line {}: Unrecognized keyword: '{}'", lineno, keyword)
