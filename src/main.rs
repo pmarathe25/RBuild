@@ -66,8 +66,8 @@ fn main() {
          for node in graph.nodes.iter() {
              let cloned_cmds = Arc::clone(&node.cmds);
              pool.execute(move || {
-                for cmd in cloned_cmds.iter() {
-                    cmd.execute();
+                for cmd in cloned_cmds.lock().unwrap().iter_mut() {
+                    cmd.spawn();
                 }
              }, 0);
              // for cmd in node.cmds.iter() {

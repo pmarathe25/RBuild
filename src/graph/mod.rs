@@ -3,9 +3,11 @@ use std::fmt::Display;
 use std::collections::{HashMap, HashSet};
 
 use std::sync::Arc;
+use std::process::Command;
 
 mod node;
-use crate::graph::node::{Node, Command};
+// use crate::graph::node::{Node, Command};
+use crate::graph::node::{Node};
 
 #[derive(Debug)]
 pub struct Graph<'a> {
@@ -70,7 +72,7 @@ impl<'a> Graph<'a> {
                                 Some(val) => val,
                                 None => panic!("Error: Line {}: run specified before path", lineno),
                             }.cmds;
-                            Arc::get_mut(&mut cmds).unwrap().push(Command::new(value));
+                            Arc::get_mut(&mut cmds).unwrap().lock().unwrap().push(Command::new(value));
                         },
                         // And arguments
                         "arg" => {
@@ -78,10 +80,10 @@ impl<'a> Graph<'a> {
                                 Some(val) => val,
                                 None => panic!("Error: Line {}: arg specified before path", lineno),
                             }.cmds;
-                            let cmd = match Arc::get_mut(&mut cmds).unwrap().last_mut() {
+                            let cmd = match Arc::get_mut(&mut cmds).unwrap().lock().unwrap().last_mut() {
                                 Some(cmd) => cmd,
                                 None => panic!("Error: Line {}: arg specified before run", lineno),
-                            }.args.push(value.to_string());
+                            }.arg(value.to_string());
                             // .unwrap().arg(value);
                         },
                         _ => panic!("Error: Line {}: Unrecognized keyword: '{}'", lineno, keyword)
@@ -139,7 +141,7 @@ impl<'a> Display for Graph<'a> {
                     }.path))?;
             }
             f.write_str("\n\tCommands:")?;
-            for cmd in node.cmds.iter() {
+            for cmd in node.cmds.lock().unwrap().iter() {
                 f.write_fmt(format_args!("\n\t\t{:?}", cmd))?;
             }
             f.write_str("\n")?;
