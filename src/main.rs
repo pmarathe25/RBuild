@@ -31,7 +31,7 @@ fn main() {
     let mut fetches = Vec::new();
     for target in args.iter().skip(2) {
         fetches.push(node_map.get(target).expect(
-            &format!("{} was not found in the graph", target)
+            &format!("{} is not a valid target", target)
         ));
     }
 

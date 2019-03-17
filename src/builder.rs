@@ -67,10 +67,10 @@ pub fn build_graph(config: &str, num_threads: usize) -> (Graph<Target, SystemTim
             // Skip over the keyword, find the first non-whitespace character,
             // and then compute its index with keyword.len() + position.
             // This gives us the value for the keyword.
-            let value = &line[match line.chars().skip(keyword.len()).position(|x| !x.is_whitespace()) {
+            let value = line[match line.chars().skip(keyword.len()).position(|x| !x.is_whitespace()) {
                 Some(index) => keyword.len() + index,
                 None => panic!("Error: Line {}: '{}' keyword does not specify a value", keyword, lineno),
-            }..];
+            }..].trim_end();
 
             match keyword {
                 "path" => {
