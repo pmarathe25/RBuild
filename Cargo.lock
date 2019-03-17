@@ -2,15 +2,15 @@
 # It is not intended for manual editing.
 [[package]]
 name = "paragraphs"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "rbuild"
 version = "0.1.0"
 dependencies = [
- "paragraphs 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "paragraphs 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [metadata]
-"checksum paragraphs 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4d00df4983a7b655b817d4539f54c6f81fe0c0964e87cb917480ddf7fb02a7e2"
+"checksum paragraphs 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8c03762001d65ec07871ca37b282f11a83ad0d6ba65101c671bf5df55d38ccf0"

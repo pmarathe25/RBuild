@@ -26,7 +26,7 @@ impl Target {
 }
 
 impl ThreadExecute<SystemTime> for Target {
-    fn execute(&mut self, inputs: Vec<&SystemTime>) -> SystemTime {
+    fn execute(&mut self, inputs: Vec<&SystemTime>) -> Option<SystemTime> {
         fn get_timestamp(path: &String) -> SystemTime {
             return match fs::metadata(path) {
                 Ok(meta) => match meta.modified() {
@@ -40,15 +40,22 @@ impl ThreadExecute<SystemTime> for Target {
         let newest_input = inputs.iter().cloned().max().unwrap_or(&SystemTime::UNIX_EPOCH);
         if inputs.into_iter().all(|inp| inp > &timestamp) {
             for cmd in &mut self.run {
-                match cmd.spawn() {
-                    Ok(_) => (),
-                    // TODO: Node functions should not panic, or, need to find a way to detct panics and abort.
-                    Err(what) => panic!("During execution of {}, command {:?} threw {}", self.path, cmd, what),
+                match cmd.status() {
+                    Ok(stat) => {
+                        if !stat.success() {
+                            println!("Command {:?} exited with status {}", cmd, stat);
+                            return None
+                        }
+                    },
+                    Err(what) => {
+                        println!("During build of {}, in command {:?}, encountered an error:\n\t{}\n\tDoes the executable specified in this command exist?", self.path, cmd, what);
+                        return None;
+                    },
                 };
             }
         }
         // Return the newest timestamp of all this node's inputs + its own.
-        return std::cmp::max(*newest_input, get_timestamp(&self.path));
+        return Some(std::cmp::max(*newest_input, get_timestamp(&self.path)));
     }
 }
 
@@ -80,7 +87,6 @@ fn build_graph(config: &str) -> (Graph<Target, SystemTime>, HashMap<String, usiz
                     if !path.is_empty() {
                         // TODO: Maybe eliminate the clone here by exposing get/get_mut in Graph.
                         node_map.insert(path.clone(), graph.add(Target::new(path, cmds), inputs));
-                        path = String::new();
                         inputs = Vec::new();
                         cmds = Vec::new();
                     }
