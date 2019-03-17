@@ -10,6 +10,16 @@ path /home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o
 dep /home/pranav/Rust/rbuild/tests/minimal project/src/fibonacci.cpp
 run echo
 arg Compiling fibonacci.o
+run g++
+arg /home/pranav/Rust/rbuild/tests/minimal project/src/fibonacci.cpp
+arg -o
+arg /home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o
+arg -I/home/pranav/Rust/rbuild/tests/minimal project/include/
+arg -flto
+arg -O3
+arg --std=c++17
+arg -march=native
+arg -c
 
 path /home/pranav/Rust/rbuild/tests/minimal project/include/factorial.hpp
 dep /home/pranav/Rust/rbuild/tests/minimal project/include/utils.hpp

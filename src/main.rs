@@ -1,4 +1,5 @@
 use std::env;
+use std::fs;
 use std::string::String;
 use std::process::Command;
 use std::time::SystemTime;
@@ -12,6 +13,7 @@ fn help(executable: &str) {
     std::process::exit(1);
 }
 
+#[derive(Debug)]
 struct Target {
     path: String,
     run: Vec<Command>,
@@ -25,15 +27,35 @@ impl Target {
 
 impl ThreadExecute<SystemTime> for Target {
     fn execute(&mut self, inputs: Vec<&SystemTime>) -> SystemTime {
-        // TODO:
-        return SystemTime::UNIX_EPOCH;
+        fn get_timestamp(path: &String) -> SystemTime {
+            return match fs::metadata(path) {
+                Ok(meta) => match meta.modified() {
+                    Ok(timestamp) => timestamp,
+                    Err(_) => panic!("Could not access timestamp for {}", path)
+                },
+                Err(_) => SystemTime::UNIX_EPOCH,
+            };
+        }
+        let timestamp = get_timestamp(&self.path);
+        let newest_input = inputs.iter().cloned().max().unwrap_or(&SystemTime::UNIX_EPOCH);
+        if inputs.into_iter().all(|inp| inp > &timestamp) {
+            for cmd in &mut self.run {
+                match cmd.spawn() {
+                    Ok(_) => (),
+                    // TODO: Node functions should not panic, or, need to find a way to detct panics and abort.
+                    Err(what) => panic!("During execution of {}, command {:?} threw {}", self.path, cmd, what),
+                };
+            }
+        }
+        // Return the newest timestamp of all this node's inputs + its own.
+        return std::cmp::max(*newest_input, get_timestamp(&self.path));
     }
 }
 
-fn build_graph(config: &str) -> Graph<Target, SystemTime> {
+fn build_graph(config: &str) -> (Graph<Target, SystemTime>, HashMap<String, usize>) {
     // TODO: Number of threads should be configurable.
     let mut graph = Graph::new(8);
-    let mut node_map: HashMap<&str, usize> = HashMap::new();
+    let mut node_map: HashMap<String, usize> = HashMap::new();
     // Per target variables
     let mut path = String::new();
     let mut inputs = Vec::new();
@@ -54,24 +76,38 @@ fn build_graph(config: &str) -> Graph<Target, SystemTime> {
             match keyword {
                 "path" => {
                     // When we encounter a new path, we first push the old node if it is non-empty.
+                    // Then, reset all variables for the target
                     if !path.is_empty() {
-                        graph.add(Target::new(path, cmds), inputs);
+                        // TODO: Maybe eliminate the clone here by exposing get/get_mut in Graph.
+                        node_map.insert(path.clone(), graph.add(Target::new(path, cmds), inputs));
+                        path = String::new();
+                        inputs = Vec::new();
+                        cmds = Vec::new();
                     }
                     path = String::from(value);
                 },
                 "dep" => {
                     let input_idx = node_map.get(value).expect(
-                        &format!("Error: Line {}: {} specified as a dependency, but did not match any specified paths.", lineno, value));
+                        &format!("Error: Line {}: {} specified as a dependency, but did not match any specified paths.", lineno, value)
+                    );
                     inputs.push(input_idx.clone());
                 },
                 "run" => {
-                    cmds.push(value);
+                    cmds.push(Command::new(value));
+                },
+                "arg" => {
+                    let last_cmd = cmds.last_mut().expect(
+                        &format!("Error: Line {}: Argument specified before command", lineno)
+                    );
+                    last_cmd.arg(value);
                 },
                 _ => panic!("Error: Line {}: Unrecognized keyword: '{}'", lineno, keyword)
             }
         };
     }
-    return graph;
+    // Add the last remaining node and return the graph.
+    node_map.insert(path.clone(), graph.add(Target::new(path, cmds), inputs));
+    return (graph, node_map);
 }
 
 fn main() {
@@ -86,13 +122,21 @@ fn main() {
         Ok(file) => file,
     };
 
+    let (mut graph, node_map) = build_graph(&config);
 
     // DEBUG:
-    println!("Graph contains:\n{}", graph);
+    println!("Graph contains:\n{:?}", graph);
 
     // First argument is the executable name and the second is the rbuild file.
     println!("{} using config file {}", args[0], args[1]);
     for target in args.iter().skip(2) {
         println!("Found target: {}", target);
     }
+
+    let recipe = graph.compile(vec![11]);
+    let mut inputs_map = HashMap::with_capacity(recipe.inputs.len());
+    for input in &recipe.inputs {
+        inputs_map.insert(input.clone(), vec![SystemTime::UNIX_EPOCH]);
+    }
+    graph.run(&recipe, inputs_map);
 }
