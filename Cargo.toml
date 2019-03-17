@@ -5,3 +5,4 @@ authors = ["Pranav Marathe <pmarathe25@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+paragraphs = ">= 0.1.1"
