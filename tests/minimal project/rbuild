@@ -1,0 +1,52 @@
+path /home/pranav/Rust/rbuild/tests/minimal project/include/utils.hpp
+
+path /home/pranav/Rust/rbuild/tests/minimal project/include/fibonacci.hpp
+dep /home/pranav/Rust/rbuild/tests/minimal project/include/utils.hpp
+
+path /home/pranav/Rust/rbuild/tests/minimal project/src/fibonacci.cpp
+dep /home/pranav/Rust/rbuild/tests/minimal project/include/fibonacci.hpp
+
+path /home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o
+dep /home/pranav/Rust/rbuild/tests/minimal project/src/fibonacci.cpp
+run echo
+arg Compiling fibonacci.o
+
+path /home/pranav/Rust/rbuild/tests/minimal project/include/factorial.hpp
+dep /home/pranav/Rust/rbuild/tests/minimal project/include/utils.hpp
+
+path /home/pranav/Rust/rbuild/tests/minimal project/src/factorial.cpp
+dep /home/pranav/Rust/rbuild/tests/minimal project/include/factorial.hpp
+
+path /home/pranav/Rust/rbuild/tests/minimal project/build/factorial.o
+dep /home/pranav/Rust/rbuild/tests/minimal project/src/factorial.cpp
+run echo
+arg Compiling factorial.o
+
+path /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so
+dep /home/pranav/Rust/rbuild/tests/minimal project/build/factorial.o
+dep /home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o
+run echo
+arg Linking libmath.so
+
+path lib
+dep /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so
+
+path /home/pranav/Rust/rbuild/tests/minimal project/test/test.cpp
+dep /home/pranav/Rust/rbuild/tests/minimal project/include/fibonacci.hpp
+dep /home/pranav/Rust/rbuild/tests/minimal project/include/factorial.hpp
+
+path /home/pranav/Rust/rbuild/tests/minimal project/build/test.o
+dep /home/pranav/Rust/rbuild/tests/minimal project/test/test.cpp
+run echo
+arg Compiling test.o
+
+path /home/pranav/Rust/rbuild/tests/minimal project/build/test
+dep /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so
+dep /home/pranav/Rust/rbuild/tests/minimal project/build/test.o
+run echo
+arg Linking test
+run echo
+arg Done linking test
+
+path test
+dep /home/pranav/Rust/rbuild/tests/minimal project/build/test
