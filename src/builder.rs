@@ -2,16 +2,19 @@ use std::fs;
 use std::time::SystemTime;
 use std::process::Command;
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
 use paragraphs::{Graph, ThreadExecute};
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug)]
 pub struct Target {
     path: String,
-    run: Vec<Command>,
+    // Keeps track of Commands and their hashes based on previous runs.
+    run: Vec<(Command, Option<u64>)>,
 }
 
 impl Target {
-    fn new(path: String, cmds: Vec<Command>) -> Target {
+    fn new(path: String, cmds: Vec<(Command, Option<u64>)>) -> Target {
         return Target{path: path, run: cmds};
     }
 }
@@ -31,13 +34,28 @@ impl ThreadExecute<SystemTime> for Target {
 
         let timestamp = get_timestamp(&self.path);
         let newest_input = inputs.iter().cloned().max().unwrap_or(&SystemTime::UNIX_EPOCH);
-        if newest_input > &timestamp {
-            for cmd in &mut self.run {
+        for (cmd, prev_hash_opt) in &mut self.run {
+            // We need to rerun a command if either the timestamp of our path is older,
+            // OR the hash for the command has changed.
+            let current_hash = {
+                let mut hasher = DefaultHasher::new();
+                format!("{:?}", cmd).hash(&mut hasher);
+                hasher.finish()
+            };
+            if newest_input > &timestamp || match prev_hash_opt {
+                // If there is a previous hash, we need to run again if the current hash is different.
+                Some(prev_hash) => current_hash != *prev_hash,
+                // If there is no previous hash, we must run the command.
+                None => true,
+            } {
                 match cmd.status() {
                     Ok(stat) => {
                         if !stat.success() {
                             println!("Command {:?} exited with status {}", cmd, stat);
                             return None
+                        } else {
+                            // If the command succeeded, we can update the hash.
+                            prev_hash_opt.replace(current_hash);
                         }
                     },
                     Err(what) => {
@@ -91,10 +109,10 @@ pub fn build_graph(config: &str, num_threads: usize) -> (Graph<Target, SystemTim
                     inputs.push(input_idx.clone());
                 },
                 "run" => {
-                    cmds.push(Command::new(value));
+                    cmds.push((Command::new(value), None));
                 },
                 "arg" => {
-                    let last_cmd = cmds.last_mut().expect(
+                    let (last_cmd, _) = cmds.last_mut().expect(
                         &format!("Error: Line {}: Argument specified before command", lineno)
                     );
                     last_cmd.arg(value);
