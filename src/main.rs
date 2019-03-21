@@ -1,4 +1,3 @@
-use std::string::String;
 use std::time::SystemTime;
 use std::collections::HashMap;
 use rgparse::{Parser, Parameter};
