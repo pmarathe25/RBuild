@@ -82,13 +82,11 @@ pub fn build_graph(config: &str, num_threads: usize) -> (Graph<Target, SystemTim
         // Each line MUST begin with a keyword describing what that line represents,
         // so we can safely split the string by whitespace here.
         if let Some(keyword) = line.split_whitespace().nth(0) {
-            // Skip over the keyword, find the first non-whitespace character,
-            // and then compute its index with keyword.len() + position.
-            // This gives us the value for the keyword.
-            let value = line[match line.chars().skip(keyword.len()).position(|x| !x.is_whitespace()) {
-                Some(index) => keyword.len() + index,
-                None => panic!("Error: Line {}: '{}' keyword does not specify a value", keyword, lineno),
-            }..].trim_end();
+            // Skip over the keyword, then trim leading/trailing whitespace.
+            let value = line[keyword.len()..].trim_start().trim_end();
+            if value.is_empty() {
+                panic!("Error: Line {}: '{}' keyword does not specify a value", keyword, lineno);
+            }
 
             match keyword {
                 "path" => {
