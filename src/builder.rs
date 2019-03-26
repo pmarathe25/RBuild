@@ -5,21 +5,21 @@ use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use paragraphs::{Graph, ThreadExecute};
 use std::hash::{Hash, Hasher};
+use std::io::Write;
 
 #[derive(Debug)]
 pub struct Target {
     path: String,
     // Keeps track of Commands and their hashes based on previous runs.
-    run: Vec<(Command, Option<u64>)>,
+    cmds: Vec<(Command, Option<u64>)>,
 }
 
 impl Target {
     fn new(path: String, cmds: Vec<(Command, Option<u64>)>) -> Target {
-        return Target{path: path, run: cmds};
+        return Target{path: path, cmds: cmds};
     }
 }
 
-// TODO: Need to log hashes of the commands previously run by this target so it can be rerun as needed.
 impl ThreadExecute<SystemTime> for Target {
     fn execute(&mut self, inputs: Vec<&SystemTime>) -> Option<SystemTime> {
         fn get_timestamp(path: &String) -> SystemTime {
@@ -34,7 +34,7 @@ impl ThreadExecute<SystemTime> for Target {
 
         let timestamp = get_timestamp(&self.path);
         let newest_input = inputs.iter().cloned().max().unwrap_or(&SystemTime::UNIX_EPOCH);
-        for (cmd, prev_hash_opt) in &mut self.run {
+        for (cmd, prev_hash_opt) in &mut self.cmds {
             // We need to rerun a command if either the timestamp of our path is older,
             // OR the hash for the command has changed.
             let current_hash = {
@@ -43,11 +43,23 @@ impl ThreadExecute<SystemTime> for Target {
                 hasher.finish()
             };
             if newest_input > &timestamp || match prev_hash_opt {
-                // If there is a previous hash, we need to run again if the current hash is different.
+                // If there is a previous hash, we need to run again if the current hash
+                // is different.
                 Some(prev_hash) => current_hash != *prev_hash,
                 // If there is no previous hash, we must run the command.
                 None => true,
             } {
+                // DEBUG:
+                println!("Running {}", self.path);
+                if newest_input > &timestamp {
+                    println!("\tTimestamp {:?} is older than newest input {:?}", timestamp, newest_input);
+                } else if let Some(prev_hash) = prev_hash_opt {
+                    println!("\tPrevious hash: {} does not match current hash: {}", prev_hash, current_hash);
+                } else {
+                    println!("\tNo previous hash found. Current hash is {}", current_hash);
+                }
+
+
                 match cmd.status() {
                     Ok(stat) => {
                         if !stat.success() {
@@ -55,6 +67,8 @@ impl ThreadExecute<SystemTime> for Target {
                             return None
                         } else {
                             // If the command succeeded, we can update the hash.
+                            // DEBUG:
+                            println!("Command successfully ran. New hash: {}", current_hash);
                             prev_hash_opt.replace(current_hash);
                         }
                     },
@@ -63,6 +77,9 @@ impl ThreadExecute<SystemTime> for Target {
                         return None;
                     },
                 };
+            } else {
+                // DEBUG:
+                println!("Skipping {:?} in  {}", cmd, self.path);
             }
         }
         // Return the newest timestamp of all this node's inputs + its own.
@@ -70,6 +87,67 @@ impl ThreadExecute<SystemTime> for Target {
     }
 }
 
+/// Writes a hash cache from the graph to the provided cache_path.
+pub fn write_hash_cache(cache: &mut fs::File, graph: &Graph<Target, SystemTime>) {
+    for node in graph {
+        // No need to cache for nodes that have never been run before,
+        // so check for the presence of hashes.
+        if let Some((_, Some(_))) = node.cmds.first() {
+            // Format is:
+            // [Path length][Path][Num Cmds][Cmds]...
+            // Using little endian for all numerical quantities.
+            cache.write_all(&(node.path.len() as u64).to_le_bytes()).unwrap();
+            cache.write_all(node.path.as_bytes()).unwrap();
+            cache.write_all(&(node.cmds.len() as u64).to_le_bytes()).unwrap();
+            for (_, hash_opt) in &node.cmds {
+                // DEBUG:
+                // println!("CMD HASH {}", hash_opt.unwrap());
+
+                cache.write_all(&hash_opt.unwrap().to_le_bytes()).unwrap();
+            }
+        }
+    }
+}
+
+// TODO: Add command-line argument for the hash_cache location.
+pub fn read_hash_cache(graph: &mut Graph<Target, SystemTime>, node_map: &HashMap<String, usize>, cache_bytes: &Vec<u8>) {
+    let mut offset = 0;
+    // Memory for storing u64 values.
+    let mut u64_bytes = [0; 8];
+
+    while offset < cache_bytes.len() {
+        // Get length of path, then path itself..
+        u64_bytes.copy_from_slice(&cache_bytes[offset..(offset + 8)]);
+        let path_size = u64::from_le_bytes(u64_bytes) as usize;
+        offset += 8;
+        let path = std::str::from_utf8(&cache_bytes[(offset)..(offset + path_size)]).unwrap();
+        offset += path_size;
+
+        // DEBUG:
+        // println!("Path Length: {}, Path: {}", path_size, path);
+
+        // If a path is missing from the graph, we just ignore it.
+        if let Some(target_id) = node_map.get(path) {
+            let target_node = graph.get_mut(*target_id).expect(
+                &format!("Invalid entry in node map: {{{}: {}}}", path, target_id)
+            );
+            // Get number of commands, then command hashes.
+            u64_bytes.copy_from_slice(&cache_bytes[offset..(offset + 8)]);
+            let num_cmds = u64::from_le_bytes(u64_bytes) as usize;
+            offset += 8;
+            for (_, hash_opt) in target_node.cmds.iter_mut().take(num_cmds) {
+                u64_bytes.copy_from_slice(&cache_bytes[offset..(offset + 8)]);
+                let cmd_hash = u64::from_le_bytes(u64_bytes);
+                offset += 8;
+                hash_opt.replace(cmd_hash);
+            }
+            // DEBUG:
+            // println!("Target node is now: {:?}", target_node);
+        }
+    }
+}
+
+// TODO: Change this so that node_map uses the hashes of the paths instead.
 pub fn build_graph(config: &str, num_threads: usize) -> (Graph<Target, SystemTime>, HashMap<String, usize>) {
     let mut graph = Graph::new(num_threads);
     let mut node_map: HashMap<String, usize> = HashMap::new();

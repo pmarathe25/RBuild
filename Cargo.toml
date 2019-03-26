@@ -8,5 +8,5 @@ description = "A Rust-based build system"
 repository = "https://github.com/pmarathe25/RBuild"
 
 [dependencies]
-paragraphs = ">= 0.2.0"
+paragraphs = ">= 0.2.2"
 rgparse = ">= 0.1.1"
