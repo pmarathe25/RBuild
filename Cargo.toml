@@ -9,4 +9,4 @@ repository = "https://github.com/pmarathe25/RBuild"
 
 [dependencies]
 paragraphs = ">= 0.2.2"
-rgparse = ">= 0.1.1"
+rgparse = ">= 0.1.2"

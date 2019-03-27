@@ -95,21 +95,18 @@ pub fn write_hash_cache(cache: &mut fs::File, graph: &Graph<Target, SystemTime>)
         if let Some((_, Some(_))) = node.cmds.first() {
             // Format is:
             // [Path length][Path][Num Cmds][Cmds]...
-            // Using little endian for all numerical quantities.
+            // Using little endian for integers.
             cache.write_all(&(node.path.len() as u64).to_le_bytes()).unwrap();
             cache.write_all(node.path.as_bytes()).unwrap();
             cache.write_all(&(node.cmds.len() as u64).to_le_bytes()).unwrap();
             for (_, hash_opt) in &node.cmds {
-                // DEBUG:
-                // println!("CMD HASH {}", hash_opt.unwrap());
-
                 cache.write_all(&hash_opt.unwrap().to_le_bytes()).unwrap();
             }
         }
     }
 }
 
-// TODO: Add command-line argument for the hash_cache location.
+// TODO: Docstring
 pub fn read_hash_cache(graph: &mut Graph<Target, SystemTime>, node_map: &HashMap<String, usize>, cache_bytes: &Vec<u8>) {
     let mut offset = 0;
     // Memory for storing u64 values.
@@ -122,10 +119,6 @@ pub fn read_hash_cache(graph: &mut Graph<Target, SystemTime>, node_map: &HashMap
         offset += 8;
         let path = std::str::from_utf8(&cache_bytes[(offset)..(offset + path_size)]).unwrap();
         offset += path_size;
-
-        // DEBUG:
-        // println!("Path Length: {}, Path: {}", path_size, path);
-
         // If a path is missing from the graph, we just ignore it.
         if let Some(target_id) = node_map.get(path) {
             let target_node = graph.get_mut(*target_id).expect(
@@ -141,8 +134,6 @@ pub fn read_hash_cache(graph: &mut Graph<Target, SystemTime>, node_map: &HashMap
                 offset += 8;
                 hash_opt.replace(cmd_hash);
             }
-            // DEBUG:
-            // println!("Target node is now: {:?}", target_node);
         }
     }
 }
