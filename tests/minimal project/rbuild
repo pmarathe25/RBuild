@@ -27,14 +27,31 @@ dep /home/pranav/Rust/rbuild/tests/minimal project/include/factorial.hpp
 
 path /home/pranav/Rust/rbuild/tests/minimal project/build/factorial.o
 dep /home/pranav/Rust/rbuild/tests/minimal project/src/factorial.cpp
-run echo
-arg Compiling factorial.o
+run g++
+arg /home/pranav/Rust/rbuild/tests/minimal project/src/factorial.cpp
+arg -o
+arg /home/pranav/Rust/rbuild/tests/minimal project/build/factorial.o
+arg -I/home/pranav/Rust/rbuild/tests/minimal project/include/
+arg -flto
+arg -O3
+arg --std=c++17
+arg -march=native
+arg -c
 
 path /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so
 dep /home/pranav/Rust/rbuild/tests/minimal project/build/factorial.o
 dep /home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o
-run echo
-arg Linking libmath.so
+run g++
+arg /home/pranav/Rust/rbuild/tests/minimal project/build/factorial.o
+arg /home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o
+arg -o
+arg /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so
+arg -fPIC
+arg -flto
+arg -O3
+arg --std=c++17
+arg -march=native
+arg -shared
 
 path lib
 dep /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so
@@ -45,16 +62,29 @@ dep /home/pranav/Rust/rbuild/tests/minimal project/include/factorial.hpp
 
 path /home/pranav/Rust/rbuild/tests/minimal project/build/test.o
 dep /home/pranav/Rust/rbuild/tests/minimal project/test/test.cpp
-run echo
-arg Compiling test.o
+run g++
+arg /home/pranav/Rust/rbuild/tests/minimal project/test/test.cpp
+arg -o
+arg /home/pranav/Rust/rbuild/tests/minimal project/build/test.o
+arg -I/home/pranav/Rust/rbuild/tests/minimal project/include/
+arg -flto
+arg -O3
+arg --std=c++17
+arg -march=native
+arg -c
 
 path /home/pranav/Rust/rbuild/tests/minimal project/build/test
 dep /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so
 dep /home/pranav/Rust/rbuild/tests/minimal project/build/test.o
-run echo
-arg Linking test
-run echo
-arg Done linking test
+run g++
+arg /home/pranav/Rust/rbuild/tests/minimal project/build/test.o
+arg /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so
+arg -o
+arg /home/pranav/Rust/rbuild/tests/minimal project/build/test
+arg -flto
+arg -O3
+arg --std=c++17
+arg -march=native
 
 path test
 dep /home/pranav/Rust/rbuild/tests/minimal project/build/test
