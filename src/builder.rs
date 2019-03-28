@@ -20,6 +20,8 @@ impl Target {
     }
 }
 
+pub(crate) static mut VERBOSE: bool = false;
+
 impl ThreadExecute<SystemTime> for Target {
     fn execute(&mut self, inputs: Vec<&SystemTime>) -> Option<SystemTime> {
         fn get_timestamp(path: &String) -> SystemTime {
@@ -49,16 +51,11 @@ impl ThreadExecute<SystemTime> for Target {
                 // If there is no previous hash, we must run the command.
                 None => true,
             } {
-                // DEBUG:
-                println!("Running {}", self.path);
-                if newest_input > &timestamp {
-                    println!("\tTimestamp {:?} is older than newest input {:?}", timestamp, newest_input);
-                } else if let Some(prev_hash) = prev_hash_opt {
-                    println!("\tPrevious hash: {} does not match current hash: {}", prev_hash, current_hash);
-                } else {
-                    println!("\tNo previous hash found. Current hash is {}", current_hash);
+                unsafe {
+                    if VERBOSE {
+                        println!("{:?}", cmd);
+                    }
                 }
-
 
                 match cmd.status() {
                     Ok(stat) => {
@@ -66,9 +63,6 @@ impl ThreadExecute<SystemTime> for Target {
                             println!("Command {:?} exited with status {}", cmd, stat);
                             return None
                         } else {
-                            // If the command succeeded, we can update the hash.
-                            // DEBUG:
-                            println!("Command successfully ran. New hash: {}", current_hash);
                             prev_hash_opt.replace(current_hash);
                         }
                     },
@@ -77,9 +71,6 @@ impl ThreadExecute<SystemTime> for Target {
                         return None;
                     },
                 };
-            } else {
-                // DEBUG:
-                println!("Skipping {:?} in  {}", cmd, self.path);
             }
         }
         // Return the newest timestamp of all this node's inputs + its own.
@@ -138,7 +129,6 @@ pub fn read_hash_cache(graph: &mut Graph<Target, SystemTime>, node_map: &HashMap
     }
 }
 
-// TODO: Change this so that node_map uses the hashes of the paths instead.
 pub fn build_graph(config: &str, num_threads: usize) -> (Graph<Target, SystemTime>, HashMap<String, usize>) {
     let mut graph = Graph::new(num_threads);
     let mut node_map: HashMap<String, usize> = HashMap::new();
@@ -171,7 +161,7 @@ pub fn build_graph(config: &str, num_threads: usize) -> (Graph<Target, SystemTim
                 },
                 "dep" => {
                     let input_idx = node_map.get(value).expect(
-                        &format!("Error: Line {}: {} specified as a dependency, but did not match any specified paths.", lineno, value)
+                        &format!("Error: Line {}: {} specified as a dependency, but did not match any specified paths. Please specify the dependency as a path BEFORE this point", lineno, value)
                     );
                     inputs.push(input_idx.clone());
                 },

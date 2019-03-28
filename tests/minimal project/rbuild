@@ -8,8 +8,6 @@ dep /home/pranav/Rust/rbuild/tests/minimal project/include/fibonacci.hpp
 
 path /home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o
 dep /home/pranav/Rust/rbuild/tests/minimal project/src/fibonacci.cpp
-run echo
-arg Compiling fibonacci.o
 run g++
 arg /home/pranav/Rust/rbuild/tests/minimal project/src/fibonacci.cpp
 arg -o
