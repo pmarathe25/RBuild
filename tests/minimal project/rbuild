@@ -53,9 +53,6 @@ arg --std=c++17
 arg -march=native
 arg -shared
 
-path lib
-dep /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so
-
 path /home/pranav/Rust/rbuild/tests/minimal project/test/test.cpp
 dep /home/pranav/Rust/rbuild/tests/minimal project/include/fibonacci.hpp
 dep /home/pranav/Rust/rbuild/tests/minimal project/include/factorial.hpp
@@ -85,6 +82,3 @@ arg -flto
 arg -O3
 arg --std=c++17
 arg -march=native
-
-path test
-dep /home/pranav/Rust/rbuild/tests/minimal project/build/test

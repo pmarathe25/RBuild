@@ -42,15 +42,24 @@ fn main() {
     // Here we can consume the command line arguments.
     let mut fetches = Vec::new();
     for target in args.positional.into_iter().skip(1) {
-        fetches.push(node_map.get(&target).expect(
+        fetches.push(*node_map.get(&target).expect(
             &format!("{} is not a valid target", target)
         ));
     }
 
+    // By default, we will build all the targets in the configuration file.
+    if fetches.is_empty() {
+        fetches = (0..graph.len()).collect();
+    }
+
     // Compile and run the graph
     // TODO: Headers/Source files with no commands may be a huge bottleneck, need to profile.
+    // If so, add a fast_execute path to paragraphs.
     if fetches.len() > 0 {
         let recipe = graph.compile(fetches);
+
+        println!("{:?}", recipe);
+
         let mut inputs_map = HashMap::with_capacity(recipe.inputs.len());
         for input in &recipe.inputs {
             inputs_map.insert(input.clone(), vec![SystemTime::UNIX_EPOCH]);

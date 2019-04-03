@@ -1,4 +1,5 @@
 use std::fs;
+use std::sync::Arc;
 use std::time::SystemTime;
 use std::process::Command;
 use std::collections::HashMap;
@@ -23,7 +24,7 @@ impl Target {
 pub(crate) static mut VERBOSE: bool = false;
 
 impl ThreadExecute<SystemTime> for Target {
-    fn execute(&mut self, inputs: Vec<&SystemTime>) -> Option<SystemTime> {
+    fn execute(&mut self, inputs: Vec<Arc<SystemTime>>) -> Option<SystemTime> {
         fn get_timestamp(path: &String) -> SystemTime {
             return match fs::metadata(path) {
                 Ok(meta) => match meta.modified() {
@@ -35,7 +36,7 @@ impl ThreadExecute<SystemTime> for Target {
         }
 
         let timestamp = get_timestamp(&self.path);
-        let newest_input = inputs.iter().cloned().max().unwrap_or(&SystemTime::UNIX_EPOCH);
+        let newest_input = *(inputs.iter().cloned().max().unwrap_or(Arc::new(SystemTime::UNIX_EPOCH)));
         for (cmd, prev_hash_opt) in &mut self.cmds {
             // We need to rerun a command if either the timestamp of our path is older,
             // OR the hash for the command has changed.
@@ -44,7 +45,7 @@ impl ThreadExecute<SystemTime> for Target {
                 format!("{:?}", cmd).hash(&mut hasher);
                 hasher.finish()
             };
-            if newest_input > &timestamp || match prev_hash_opt {
+            if newest_input > timestamp || match prev_hash_opt {
                 // If there is a previous hash, we need to run again if the current hash
                 // is different.
                 Some(prev_hash) => current_hash != *prev_hash,
@@ -74,7 +75,7 @@ impl ThreadExecute<SystemTime> for Target {
             }
         }
         // Return the newest timestamp of all this node's inputs + its own.
-        return Some(std::cmp::max(*newest_input, get_timestamp(&self.path)));
+        return Some(std::cmp::max(newest_input, get_timestamp(&self.path)));
     }
 }
 
