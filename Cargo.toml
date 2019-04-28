@@ -1,6 +1,6 @@
 [package]
 name = "rbuild"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Pranav Marathe <pmarathe25@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -8,5 +8,5 @@ description = "A Rust-based build system"
 repository = "https://github.com/pmarathe25/RBuild"
 
 [dependencies]
-paragraphs = ">= 0.3.0"
+paragraphs = ">= 0.3.1"
 rgparse = ">= 0.1.2"

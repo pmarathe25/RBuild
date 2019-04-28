@@ -1,84 +1,37 @@
-path /home/pranav/Rust/rbuild/tests/minimal project/include/utils.hpp
+path /home/pranav/Rust/rbuild/tests/minimal project/include/utils.hpp #0
 
-path /home/pranav/Rust/rbuild/tests/minimal project/include/fibonacci.hpp
-dep /home/pranav/Rust/rbuild/tests/minimal project/include/utils.hpp
+path /home/pranav/Rust/rbuild/tests/minimal project/include/fibonacci.hpp #1
+deps 0
 
-path /home/pranav/Rust/rbuild/tests/minimal project/src/fibonacci.cpp
-dep /home/pranav/Rust/rbuild/tests/minimal project/include/fibonacci.hpp
+path /home/pranav/Rust/rbuild/tests/minimal project/src/fibonacci.cpp #2
+deps 1
 
-path /home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o
-dep /home/pranav/Rust/rbuild/tests/minimal project/src/fibonacci.cpp
-run g++
-arg /home/pranav/Rust/rbuild/tests/minimal project/src/fibonacci.cpp
-arg -o
-arg /home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o
-arg -I/home/pranav/Rust/rbuild/tests/minimal project/include/
-arg -flto
-arg -O3
-arg --std=c++17
-arg -march=native
-arg -c
+path /home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o #3
+deps 2
+run "g++" "/home/pranav/Rust/rbuild/tests/minimal project/src/fibonacci.cpp" "-o/home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o" "-I/home/pranav/Rust/rbuild/tests/minimal project/include/" "-flto" "-O3" "--std=c++17" "-march=native" "-c"
 
-path /home/pranav/Rust/rbuild/tests/minimal project/include/factorial.hpp
-dep /home/pranav/Rust/rbuild/tests/minimal project/include/utils.hpp
+path /home/pranav/Rust/rbuild/tests/minimal project/include/factorial.hpp #4
+deps 0
 
-path /home/pranav/Rust/rbuild/tests/minimal project/src/factorial.cpp
-dep /home/pranav/Rust/rbuild/tests/minimal project/include/factorial.hpp
+path /home/pranav/Rust/rbuild/tests/minimal project/src/factorial.cpp #5
+deps 4
 
-path /home/pranav/Rust/rbuild/tests/minimal project/build/factorial.o
-dep /home/pranav/Rust/rbuild/tests/minimal project/src/factorial.cpp
-run g++
-arg /home/pranav/Rust/rbuild/tests/minimal project/src/factorial.cpp
-arg -o
-arg /home/pranav/Rust/rbuild/tests/minimal project/build/factorial.o
-arg -I/home/pranav/Rust/rbuild/tests/minimal project/include/
-arg -flto
-arg -O3
-arg --std=c++17
-arg -march=native
-arg -c
+path /home/pranav/Rust/rbuild/tests/minimal project/build/factorial.o #6
+deps 5
+run "g++" "/home/pranav/Rust/rbuild/tests/minimal project/src/factorial.cpp" "-o/home/pranav/Rust/rbuild/tests/minimal project/build/factorial.o" "-I/home/pranav/Rust/rbuild/tests/minimal project/include/" "-flto" "-O3" "--std=c++17" "-march=native" "-c"
 
-path /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so
-dep /home/pranav/Rust/rbuild/tests/minimal project/build/factorial.o
-dep /home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o
-run g++
-arg /home/pranav/Rust/rbuild/tests/minimal project/build/factorial.o
-arg /home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o
-arg -o
-arg /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so
-arg -fPIC
-arg -flto
-arg -O3
-arg --std=c++17
-arg -march=native
-arg -shared
+path /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so #7
+deps 6 3
+run "g++" "/home/pranav/Rust/rbuild/tests/minimal project/build/factorial.o" "/home/pranav/Rust/rbuild/tests/minimal project/build/fibonacci.o" "-o/home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so" "-fPIC" "-flto" "-O3" "--std=c++17" "-march=native" "-shared"
 
-path /home/pranav/Rust/rbuild/tests/minimal project/test/test.cpp
-dep /home/pranav/Rust/rbuild/tests/minimal project/include/fibonacci.hpp
-dep /home/pranav/Rust/rbuild/tests/minimal project/include/factorial.hpp
+path /home/pranav/Rust/rbuild/tests/minimal project/test/test.cpp #8
+deps 1
+deps 4
 
-path /home/pranav/Rust/rbuild/tests/minimal project/build/test.o
-dep /home/pranav/Rust/rbuild/tests/minimal project/test/test.cpp
-run g++
-arg /home/pranav/Rust/rbuild/tests/minimal project/test/test.cpp
-arg -o
-arg /home/pranav/Rust/rbuild/tests/minimal project/build/test.o
-arg -I/home/pranav/Rust/rbuild/tests/minimal project/include/
-arg -flto
-arg -O3
-arg --std=c++17
-arg -march=native
-arg -c
+path /home/pranav/Rust/rbuild/tests/minimal project/build/test.o #9
+deps 8
+run "g++" "/home/pranav/Rust/rbuild/tests/minimal project/test/test.cpp" "-o/home/pranav/Rust/rbuild/tests/minimal project/build/test.o" "-I/home/pranav/Rust/rbuild/tests/minimal project/include/" "-flto" "-O3" "--std=c++17" "-march=native" "-c"
 
-path /home/pranav/Rust/rbuild/tests/minimal project/build/test
-dep /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so
-dep /home/pranav/Rust/rbuild/tests/minimal project/build/test.o
-run g++
-arg /home/pranav/Rust/rbuild/tests/minimal project/build/test.o
-arg /home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so
-arg -o
-arg /home/pranav/Rust/rbuild/tests/minimal project/build/test
-arg -flto
-arg -O3
-arg --std=c++17
-arg -march=native
+path /home/pranav/Rust/rbuild/tests/minimal project/build/test #10
+deps 7 9
+run "g++" "/home/pranav/Rust/rbuild/tests/minimal project/build/test.o" "/home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so" "-o/home/pranav/Rust/rbuild/tests/minimal project/build/test" "-flto" "-O3" "--std=c++17" "-march=native"

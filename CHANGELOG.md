@@ -1,6 +1,10 @@
 # RBuild - A Rust-based build system
 **NOTE**: Dates are in YYYY-MM-DD format.
 
+## v0.1.1 (2019-04-27)
+- Performance optimizations, by removing excessive `format!`s.
+- Removes `--verbose` option.
+
 ## v0.1.0 (2019-04-02)
 - Adds the Target struct, which corresponds to a path in the rbuild file.
 - Adds a basic command-line utility that accepts the rbuild file and targets as arguments.

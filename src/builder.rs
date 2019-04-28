@@ -21,8 +21,6 @@ impl Target {
     }
 }
 
-pub(crate) static mut VERBOSE: bool = false;
-
 impl ThreadExecute<SystemTime> for Target {
     fn execute(&mut self, inputs: Vec<Arc<SystemTime>>) -> Option<SystemTime> {
         fn get_timestamp(path: &String) -> SystemTime {
@@ -35,16 +33,18 @@ impl ThreadExecute<SystemTime> for Target {
             };
         }
 
+        fn get_cmd_hash(cmd: &Command) -> u64 {
+            let mut hasher = DefaultHasher::new();
+            format!("{:?}", cmd).hash(&mut hasher);
+            hasher.finish()
+        }
+
         let timestamp = get_timestamp(&self.path);
         let newest_input = *(inputs.iter().cloned().max().unwrap_or(Arc::new(SystemTime::UNIX_EPOCH)));
         for (cmd, prev_hash_opt) in &mut self.cmds {
             // We need to rerun a command if either the timestamp of our path is older,
             // OR the hash for the command has changed.
-            let current_hash = {
-                let mut hasher = DefaultHasher::new();
-                format!("{:?}", cmd).hash(&mut hasher);
-                hasher.finish()
-            };
+            let current_hash = get_cmd_hash(&cmd);
             if newest_input > timestamp || match prev_hash_opt {
                 // If there is a previous hash, we need to run again if the current hash
                 // is different.
@@ -52,17 +52,11 @@ impl ThreadExecute<SystemTime> for Target {
                 // If there is no previous hash, we must run the command.
                 None => true,
             } {
-                unsafe {
-                    if VERBOSE {
-                        println!("{:?}", cmd);
-                    }
-                }
-
                 match cmd.status() {
                     Ok(stat) => {
                         if !stat.success() {
                             println!("Command {:?} exited with status {}", cmd, stat);
-                            return None
+                            return None;
                         } else {
                             prev_hash_opt.replace(current_hash);
                         }
@@ -81,21 +75,23 @@ impl ThreadExecute<SystemTime> for Target {
 
 /// Writes a hash cache from the graph to the provided cache_path.
 pub fn write_hash_cache(cache: &mut fs::File, graph: &Graph<Target, SystemTime>) {
-    for node in graph {
-        // No need to cache for nodes that have never been run before,
+    let mut raw_cache = Vec::new();
+    for target in graph {
+        // No need to cache for targets that have never been run before,
         // so check for the presence of hashes.
-        if let Some((_, Some(_))) = node.cmds.first() {
+        if let Some((_, Some(_))) = target.cmds.first() {
             // Format is:
             // [Path length][Path][Num Cmds][Cmds]...
             // Using little endian for integers.
-            cache.write_all(&(node.path.len() as u64).to_le_bytes()).unwrap();
-            cache.write_all(node.path.as_bytes()).unwrap();
-            cache.write_all(&(node.cmds.len() as u64).to_le_bytes()).unwrap();
-            for (_, hash_opt) in &node.cmds {
-                cache.write_all(&hash_opt.unwrap().to_le_bytes()).unwrap();
+            raw_cache.extend_from_slice(&(target.path.len() as u64).to_le_bytes());
+            raw_cache.extend_from_slice(target.path.as_bytes());
+            raw_cache.extend_from_slice(&(target.cmds.len() as u64).to_le_bytes());
+            for (_, hash_opt) in &target.cmds {
+                raw_cache.extend_from_slice(&hash_opt.unwrap().to_le_bytes());
             }
         }
     }
+    cache.write(raw_cache.as_slice()).unwrap();
 }
 
 // TODO: Docstring
@@ -113,9 +109,10 @@ pub fn read_hash_cache(graph: &mut Graph<Target, SystemTime>, node_map: &HashMap
         offset += path_size;
         // If a path is missing from the graph, we just ignore it.
         if let Some(target_id) = node_map.get(path) {
-            let target_node = graph.get_mut(*target_id).expect(
-                &format!("Invalid entry in node map: {{{}: {}}}", path, target_id)
-            );
+            let target_node = match graph.get_mut(*target_id) {
+                Some(id) => id,
+                None => panic!("Invalid entry in node map: {{{}: {}}}", path, target_id)
+            };
             // Get number of commands, then command hashes.
             u64_bytes.copy_from_slice(&cache_bytes[offset..(offset + 8)]);
             let num_cmds = u64::from_le_bytes(u64_bytes) as usize;
@@ -161,18 +158,20 @@ pub fn build_graph(config: &str, num_threads: usize) -> (Graph<Target, SystemTim
                     path = String::from(value);
                 },
                 "dep" => {
-                    let input_idx = node_map.get(value).expect(
-                        &format!("Error: Line {}: {} specified as a dependency, but did not match any specified paths. Please specify the dependency as a path BEFORE this point", lineno, value)
-                    );
+                    let input_idx = match node_map.get(value) {
+                        Some(id) => id,
+                        None => panic!("Error: Line {}: {} specified as a dependency, but did not match any specified paths. Please specify the dependency as a path BEFORE this point", lineno, value)
+                    };
                     inputs.push(input_idx.clone());
                 },
                 "run" => {
                     cmds.push((Command::new(value), None));
                 },
                 "arg" => {
-                    let (last_cmd, _) = cmds.last_mut().expect(
-                        &format!("Error: Line {}: Argument specified before command", lineno)
-                    );
+                    let last_cmd = match cmds.last_mut() {
+                        Some((cmd, _hash)) => cmd,
+                        None => panic!("Error: Line {}: Argument specified before command", lineno)
+                    };
                     last_cmd.arg(value);
                 },
                 _ => panic!("Error: Line {}: Unrecognized keyword: '{}'", lineno, keyword)

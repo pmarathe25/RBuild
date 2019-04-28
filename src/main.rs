@@ -4,15 +4,16 @@ use rgparse::{Parser, Parameter};
 use std::fs;
 
 mod builder;
+mod token;
+mod lexer;
 
 fn main() {
     let mut parser = Parser::new("A tool for fast incremental builds");
     parser.add_parameter(Parameter::param("--threads", "The number of threads to use during execution").alias("-t").default(&8));
     parser.add_parameter(Parameter::param("--cache", "The cache file to read from and write to. RBuild uses this to figure out when a command has been modified and needs to be re-run.").alias("-c").default(&"rbuild.cache"));
-    parser.add_parameter(Parameter::flag("--verbose", "In verbose mode, RBuild displays the commands being run in addition to their output").alias("-v"));
     let args = parser.parse_args();
 
-    // Get the config file.
+    // Get the config file and build a graph.
     let config_path = match args.positional.get(0) {
         Some(val) => val,
         None => {
@@ -33,11 +34,6 @@ fn main() {
         builder::read_hash_cache(&mut graph, &node_map, &cache_bytes);
     };
 
-    // Set verbosity mode. Unsafe because builder::VERBOSE is a static mut.
-    unsafe {
-        builder::VERBOSE = args.flag("--verbose");
-    }
-
     // Assemble fetches, i.e. nodes to run, based on command line arguments.
     // Here we can consume the command line arguments.
     let mut fetches = Vec::new();
@@ -46,7 +42,6 @@ fn main() {
             &format!("{} is not a valid target", target)
         ));
     }
-
     // By default, we will build all the targets in the configuration file.
     if fetches.is_empty() {
         fetches = (0..graph.len()).collect();
@@ -57,9 +52,6 @@ fn main() {
     // If so, add a fast_execute path to paragraphs.
     if fetches.len() > 0 {
         let recipe = graph.compile(fetches);
-
-        println!("{:?}", recipe);
-
         let mut inputs_map = HashMap::with_capacity(recipe.inputs.len());
         for input in &recipe.inputs {
             inputs_map.insert(input.clone(), vec![SystemTime::UNIX_EPOCH]);
@@ -72,6 +64,5 @@ fn main() {
         Ok(file) => file,
         Err(what) => panic!("Failed to write cache file ({}):\n\t{}", cache_path, what),
     };
-
     builder::write_hash_cache(&mut cache, &graph);
 }
