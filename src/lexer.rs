@@ -57,9 +57,9 @@ impl<'a> Lexer<'a> {
                 },
                 // Tags can be specified after paths to make indexing easier.
                 '#' => {
-                    // Consume the hash
-                    self.read_char();
-                    token = Token::lookup(&self.read_until(|c| c.is_whitespace()));
+                    // Consume the comment
+                    self.read_until(|c| c.is_whitespace());
+                    token = Token::Tag;
                 }
                 _ => token = Token::lookup(&self.read_until(|c| c.is_whitespace())),
             };
@@ -72,7 +72,12 @@ impl<'a> Lexer<'a> {
 impl<'a> Iterator for Lexer<'a> {
     type Item = Token;
     fn next(&mut self) -> Option<Token> {
-        return self.next_token();
+        // Skip over comments.
+        let mut token_opt = self.next_token();
+        while let Some(Token::Tag) = token_opt {
+            token_opt = self.next_token();
+        };
+        return token_opt;
     }
 }
 
@@ -126,9 +131,9 @@ mod tests {
     }
 
     #[test]
-    fn test_can_read_tag() {
+    fn test_will_skip_comments() {
         let mut lexer = make_lexer("#0569");
-        assert_eq!(lexer.next(), Some(Token::Tag(0569)));
+        assert_eq!(lexer.next(), None);
     }
 
     #[test]
@@ -136,16 +141,16 @@ mod tests {
         let mut lexer = make_lexer("path /my/test/path #0");
         assert_eq!(lexer.next(), Some(Token::Path));
         assert_eq!(lexer.next(), Some(Token::Ident("/my/test/path".to_string())));
-        assert_eq!(lexer.next(), Some(Token::Tag(0)));
+        assert_eq!(lexer.next(), None);
     }
 
     #[test]
     fn test_can_read_deps() {
         let mut lexer = make_lexer("deps 0 1 2");
         assert_eq!(lexer.next(), Some(Token::Deps));
-        assert_eq!(lexer.next(), Some(Token::Tag(0)));
-        assert_eq!(lexer.next(), Some(Token::Tag(1)));
-        assert_eq!(lexer.next(), Some(Token::Tag(2)));
+        assert_eq!(lexer.next(), Some(Token::Num(0)));
+        assert_eq!(lexer.next(), Some(Token::Num(1)));
+        assert_eq!(lexer.next(), Some(Token::Num(2)));
     }
 
     #[test]

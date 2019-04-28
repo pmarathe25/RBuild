@@ -1,17 +1,19 @@
 #[derive(Debug,PartialEq)]
 pub(crate) enum Token {
     Ident(String),
-    Tag(usize),
+    Num(usize),
     // Keywords
     Path,
     Deps,
-    Run
+    Run,
+    // Special Types
+    Tag
 }
 
 pub(crate) const ESCAPE: char = '\\';
 
 impl Token {
-    // Tried to match ident with a keyword, otherwise returns an Ident.
+    // Tries to match ident with a keyword or tag, otherwise returns an Ident.
     pub(crate) fn lookup(ident: &str) -> Token {
         match ident {
             "path" => return Token::Path,
@@ -19,7 +21,7 @@ impl Token {
             "run" =>  return Token::Run,
             _ => {
                 if let Ok(num) = ident.parse::<usize>() {
-                    return Token::Tag(num);
+                    return Token::Num(num);
                 }
                 return Token::Ident(String::from(ident));
             },
