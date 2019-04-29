@@ -1,6 +1,9 @@
 # RBuild - A Rust-based build system
 **NOTE**: Dates are in YYYY-MM-DD format.
 
+## v0.3.0 (2019-04-29)
+- Removes caching entirely. The meta-build system is now responsible for generating unique paths for targets configured with different options.
+
 ## v0.2.0 (2019-04-28)
 - New lexer and parser, so now keywords no longer need to be on new lines.
 - Added `#NUM` syntax to annotate paths with their ids.

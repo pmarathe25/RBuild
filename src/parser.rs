@@ -1,11 +1,10 @@
 use std::iter::Peekable;
 use std::process::Command;
-use std::collections::{HashMap, hash_map::DefaultHasher};
-use std::hash::{Hash, Hasher};
+use std::collections::HashMap;
 
 use crate::token::Token;
 use crate::lexer::Lexer;
-use crate::target::{HashCommand, Target};
+use crate::target::Target;
 use paragraphs::Graph;
 use std::time::SystemTime;
 
@@ -24,7 +23,7 @@ impl<'a> Parser<'a> {
         // Read path
         match self.token_stream.next() {
             Some(Token::Path) => (),
-            _ => panic!("Expected path keyword")
+            err_val @ _ => panic!("Expected path keyword, received {:?}", err_val)
         }
         let path = match self.token_stream.next() {
             Some(Token::Ident(path)) => path,
@@ -43,28 +42,23 @@ impl<'a> Parser<'a> {
             }
             match self.token_stream.next().unwrap() {
                 Token::Run => {
-                    // Build a hash as we read the command.
-                    let mut hasher = DefaultHasher::new();
                     let mut cmd: Command;
 
                     // Get executable name
                     match self.token_stream.next() {
                         Some(Token::Ident(exec)) => {
-                            exec.hash(&mut hasher);
                             cmd = Command::new(exec);
                         },
-                        err_val => panic!("Expected executable after run keyword, but recieved {:?}", err_val),
+                        err_val @ _ => panic!("Expected executable after run keyword, but recieved {:?}", err_val),
                     }
                     // Pull in all subsequent Idents as arguments to the command.
                     while let Some(Token::Ident(_)) = self.token_stream.peek() {
                         if let Some(Token::Ident(arg)) = self.token_stream.next() {
-                            arg.hash(&mut hasher);
                             cmd.arg(arg);
                         }
                     }
 
-                    let cmd_hash = hasher.finish();
-                    cmds.push(HashCommand::new(cmd, cmd_hash))
+                    cmds.push(cmd);
                 },
                 Token::Deps => {
                     // Pull in all subsequent Nums

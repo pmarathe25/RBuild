@@ -1,18 +1,15 @@
 use std::time::SystemTime;
 use std::collections::HashMap;
 use rgparse::{Parameter};
-use std::fs;
 
 mod target;
 mod token;
 mod lexer;
 mod parser;
-mod cache;
 
 fn main() {
     let mut argparser = rgparse::Parser::new("A tool for fast incremental builds");
     argparser.add_parameter(Parameter::param("--threads", "The number of threads to use during execution").alias("-t").default(&8));
-    argparser.add_parameter(Parameter::param("--cache", "The cache file to read from and write to. RBuild uses this to figure out when a command has been modified and needs to be re-run.").alias("-c").default(&"rbuild.cache"));
     let args = argparser.parse_args();
 
     // Parse the config file and build a graph.
@@ -35,13 +32,6 @@ fn main() {
         return;
     }
 
-    // Read cache into the graph..
-    let cache_path: String = args.get("--cache");
-    if let Ok(cache_bytes) = fs::read(&cache_path) {
-        println!("Reading cache: {}", cache_path);
-        cache::read(&mut parser.graph, &parser.node_map, &cache_bytes);
-    };
-
     // Assemble fetches, i.e. nodes to run, based on command line arguments.
     // Here we can consume the command line arguments.
     let mut fetches = Vec::new();
@@ -49,7 +39,7 @@ fn main() {
         fetches.push(
             match parser.node_map.get(&target) {
                 Some(&id) => id,
-                None => panic!("{} is not a valid target", target),
+                None => panic!("{} is not a valid target. Note: node_map is: {:?}", target, parser.node_map),
             }
         );
     }
@@ -67,11 +57,4 @@ fn main() {
         inputs_map.insert(input.clone(), vec![SystemTime::UNIX_EPOCH]);
     }
     parser.graph.run(&recipe, inputs_map);
-
-    // Write out cache hash after running the graph.
-    let mut cache = match fs::File::create(&cache_path) {
-        Ok(file) => file,
-        Err(what) => panic!("Failed to write cache file ({}):\n\t{}", cache_path, what),
-    };
-    cache::write(&mut cache, &parser.graph);
 }
