@@ -1,6 +1,14 @@
 # RBuild - A Rust-based build system
 **NOTE**: Dates are in YYYY-MM-DD format.
 
+## v0.2.0 (2019-04-28)
+- New lexer and parser, so now keywords no longer need to be on new lines.
+- Added `#NUM` syntax to annotate paths with their ids.
+- `dep` renamed to `deps` and now accepts multiple unsigned integer (corresponding to path id) dependencies.
+- `run` now accepts arguments directly, and `arg` has been removed.
+- Quotes or backslash (`\`) can be used to escape whitespace (see example in `tests/minimal\ project/rbuild`)
+- Command hashing is now performed during parsing, and no longer relies on `format!`ing `Command`s.
+
 ## v0.1.1 (2019-04-27)
 - Performance optimizations, by removing excessive `format!`s.
 - Removes `--verbose` option.

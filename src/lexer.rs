@@ -32,7 +32,8 @@ impl<'a> Lexer<'a> {
 
     // Reads until the closure returns true, including the last element.
     fn read_until(&mut self, until: impl Fn(char) -> bool) -> String {
-        let mut ident = String::new();
+        // Most paths are shorter than 150 characters, so this should be prevent reallocations.
+        let mut ident = String::with_capacity(150);
         let mut prev = '\0';
         while let Some(curr) = self.read_char() {
             if prev != ESCAPE && until(curr) {

@@ -91,6 +91,8 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use super::{Parser};
+    use std::collections::HashSet;
+    use std::iter::FromIterator;
 
     fn make_parser<'a>(inp: &'a str) -> Parser<'a> {
         return Parser::new(inp, 8);
@@ -114,5 +116,17 @@ mod tests {
         parser.parse();
         assert_eq!(parser.graph.get(0).unwrap().path, "/my/path/0");
         assert_eq!(parser.graph.get(1).unwrap().path, "/my/path/1");
+    }
+
+    #[test]
+    fn can_parse_multiple_nodes_with_deps() {
+        let mut parser = make_parser("path #0 /my/path/0 path /my/path/1 deps 0");
+        parser.parse();
+        assert_eq!(parser.graph.get(0).unwrap().path, "/my/path/0");
+        assert_eq!(parser.graph.get(1).unwrap().path, "/my/path/1");
+        // Next we check that if we compile for node 1, node 0 is the recipe input.
+        let recipe = parser.graph.compile(&[1]);
+        assert_eq!(recipe.inputs, HashSet::from_iter(vec![0 as usize]));
+        assert_eq!(recipe.outputs, HashSet::from_iter(vec![1 as usize]));
     }
 }

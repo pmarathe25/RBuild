@@ -1,24 +1,25 @@
 use std::time::SystemTime;
 use std::collections::HashMap;
-use rgparse::{Parser, Parameter};
+use rgparse::{Parameter};
 use std::fs;
 
 mod target;
 mod token;
 mod lexer;
 mod parser;
+mod cache;
 
 fn main() {
-    let mut parser = Parser::new("A tool for fast incremental builds");
-    parser.add_parameter(Parameter::param("--threads", "The number of threads to use during execution").alias("-t").default(&8));
-    parser.add_parameter(Parameter::param("--cache", "The cache file to read from and write to. RBuild uses this to figure out when a command has been modified and needs to be re-run.").alias("-c").default(&"rbuild.cache"));
-    let args = parser.parse_args();
+    let mut argparser = rgparse::Parser::new("A tool for fast incremental builds");
+    argparser.add_parameter(Parameter::param("--threads", "The number of threads to use during execution").alias("-t").default(&8));
+    argparser.add_parameter(Parameter::param("--cache", "The cache file to read from and write to. RBuild uses this to figure out when a command has been modified and needs to be re-run.").alias("-c").default(&"rbuild.cache"));
+    let args = argparser.parse_args();
 
     // Parse the config file and build a graph.
     let config_path = match args.positional.get(0) {
         Some(val) => val,
         None => {
-            parser.help();
+            argparser.help();
             panic!("Error: No configuration file provided.");
         }
     };
@@ -38,7 +39,7 @@ fn main() {
     let cache_path: String = args.get("--cache");
     if let Ok(cache_bytes) = fs::read(&cache_path) {
         println!("Reading cache: {}", cache_path);
-        target::read_hash_cache(&mut parser.graph, &parser.node_map, &cache_bytes);
+        cache::read(&mut parser.graph, &parser.node_map, &cache_bytes);
     };
 
     // Assemble fetches, i.e. nodes to run, based on command line arguments.
@@ -72,5 +73,5 @@ fn main() {
         Ok(file) => file,
         Err(what) => panic!("Failed to write cache file ({}):\n\t{}", cache_path, what),
     };
-    target::write_hash_cache(&mut cache, &parser.graph);
+    cache::write(&mut cache, &parser.graph);
 }
