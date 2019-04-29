@@ -2,7 +2,7 @@ use std::fs;
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::process::Command;
-use paragraphs::{Graph, ThreadExecute};
+use paragraphs::ThreadExecute;
 
 // Keeps track of a Command, hash of the current run, and optional hash from previous cached runs.
 #[derive(Debug)]
