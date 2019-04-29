@@ -92,7 +92,7 @@ mod tests {
     }
 
     #[test]
-    fn test_can_parse_single_keywords() {
+    fn can_parse_single_keywords() {
         let keywords: HashMap<&str, Token> = HashMap::from_iter(vec![
             ("path", Token::Path),
             ("deps", Token::Deps),
@@ -105,39 +105,39 @@ mod tests {
     }
 
     #[test]
-    fn test_can_escape_spaces() {
+    fn can_escape_spaces() {
         let mut lexer = make_lexer("my\\ string\\ with\\ spaces");
         assert_eq!(lexer.next(), Some(Token::Ident("my\\ string\\ with\\ spaces".to_string())));
     }
 
     #[test]
-    fn test_single_quoted_string_is_single_token() {
+    fn single_quoted_string_is_single_token() {
         let mut lexer = make_lexer("'my quoted string with whitespaces'");
         assert_eq!(lexer.next(), Some(Token::Ident("my quoted string with whitespaces".to_string())));
         assert_eq!(lexer.next(), None);
     }
 
     #[test]
-    fn test_double_quoted_string_is_single_token() {
+    fn double_quoted_string_is_single_token() {
         let mut lexer = make_lexer("\"my quoted string with whitespaces\"");
         assert_eq!(lexer.next(), Some(Token::Ident("my quoted string with whitespaces".to_string())));
         assert_eq!(lexer.next(), None);
     }
 
     #[test]
-    fn test_quoted_keyword_is_ident() {
+    fn quoted_keyword_is_ident() {
         let mut lexer = make_lexer("'path'");
         assert_eq!(lexer.next(), Some(Token::Ident("path".to_string())));
     }
 
     #[test]
-    fn test_will_skip_comments() {
+    fn will_skip_comments() {
         let mut lexer = make_lexer("#0569");
         assert_eq!(lexer.next(), None);
     }
 
     #[test]
-    fn test_can_read_path_tag() {
+    fn can_read_path_tag() {
         let mut lexer = make_lexer("path /my/test/path #0");
         assert_eq!(lexer.next(), Some(Token::Path));
         assert_eq!(lexer.next(), Some(Token::Ident("/my/test/path".to_string())));
@@ -145,7 +145,7 @@ mod tests {
     }
 
     #[test]
-    fn test_can_read_deps() {
+    fn can_read_deps() {
         let mut lexer = make_lexer("deps 0 1 2");
         assert_eq!(lexer.next(), Some(Token::Deps));
         assert_eq!(lexer.next(), Some(Token::Num(0)));
@@ -154,7 +154,7 @@ mod tests {
     }
 
     #[test]
-    fn test_can_read_run() {
+    fn can_read_run() {
         let mut lexer = make_lexer("run g++ '/my/path.cpp' '-omy output/path.o'");
         assert_eq!(lexer.next(), Some(Token::Run));
         assert_eq!(lexer.next(), Some(Token::Ident("g++".to_string())));
