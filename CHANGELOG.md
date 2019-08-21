@@ -1,6 +1,9 @@
 # RBuild - A Rust-based build system
 **NOTE**: Dates are in YYYY-MM-DD format.
 
+## v0.3.1 (2019-08-20)
+- Adds `always` keyword, which will always run the specified command regardless of timestamps.
+
 ## v0.3.0 (2019-04-29)
 - Removes caching entirely. The meta-build system is now responsible for generating unique paths for targets configured with different options.
 

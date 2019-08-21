@@ -32,6 +32,7 @@ impl<'a> Parser<'a> {
 
         let mut deps = Vec::new();
         let mut cmds = Vec::new();
+        let mut always_cmds = Vec::new();
 
         loop {
             // Break out of the loop when either:
@@ -41,15 +42,14 @@ impl<'a> Parser<'a> {
                 break;
             }
             match self.token_stream.next().unwrap() {
-                Token::Run => {
+                token_type @ Token::Run | token_type @ Token::Always => {
                     let mut cmd: Command;
-
                     // Get executable name
                     match self.token_stream.next() {
                         Some(Token::Ident(exec)) => {
                             cmd = Command::new(exec);
                         },
-                        err_val @ _ => panic!("Expected executable after run keyword, but recieved {:?}", err_val),
+                        err_val @ _ => panic!("Expected executable after run/always keyword, but recieved {:?}", err_val),
                     }
                     // Pull in all subsequent Idents as arguments to the command.
                     while let Some(Token::Ident(_)) = self.token_stream.peek() {
@@ -58,7 +58,15 @@ impl<'a> Parser<'a> {
                         }
                     }
 
-                    cmds.push(cmd);
+                    match token_type {
+                        Token::Run => {
+                            cmds.push(cmd);
+                        },
+                        Token::Always => {
+                            always_cmds.push(cmd);
+                        },
+                        _ => unreachable!(),
+                    }
                 },
                 Token::Deps => {
                     // Pull in all subsequent Nums
@@ -72,7 +80,7 @@ impl<'a> Parser<'a> {
                 err_val @ _ => panic!("Found {:?}, before keyword", err_val),
             }
         }
-        self.node_map.insert(path.clone(), self.graph.add(Target::new(path, cmds), deps));
+        self.node_map.insert(path.clone(), self.graph.add(Target::new(path, cmds, always_cmds), deps));
     }
 
     pub(crate) fn parse(&mut self) {

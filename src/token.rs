@@ -6,6 +6,7 @@ pub(crate) enum Token {
     Path,
     Deps,
     Run,
+    Always,
     // Special Types
     Tag
 }
@@ -19,6 +20,7 @@ impl Token {
             "path" => return Token::Path,
             "deps" => return Token::Deps,
             "run" =>  return Token::Run,
+            "always" =>  return Token::Always,
             _ => {
                 if let Ok(num) = ident.parse::<usize>() {
                     return Token::Num(num);

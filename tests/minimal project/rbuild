@@ -1,4 +1,5 @@
 path "/home/pranav/Rust/rbuild/tests/minimal project/include/utils.hpp" #0
+always "echo" "Found header"
 
 path "/home/pranav/Rust/rbuild/tests/minimal project/include/fibonacci.hpp" #1
 deps 0
@@ -35,3 +36,5 @@ run "g++" "/home/pranav/Rust/rbuild/tests/minimal project/test/test.cpp" "-o/hom
 path "/home/pranav/Rust/rbuild/tests/minimal project/build/test" #10
 deps 7 9
 run "g++" "/home/pranav/Rust/rbuild/tests/minimal project/build/test.o" "/home/pranav/Rust/rbuild/tests/minimal project/build/libmath.so" "-o/home/pranav/Rust/rbuild/tests/minimal project/build/test" "-flto" "-O3" "--std=c++17" "-march=native"
+run "echo" "Test target not found, building"
+always "echo" "Built test target"
